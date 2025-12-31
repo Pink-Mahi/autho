@@ -1,6 +1,8 @@
 import express, { Express, Request, Response } from 'express';
 import { OperatorNode } from './node';
 import { WalletAPI } from '../api/wallet-api';
+import { TokenAPI } from '../token/token-api';
+import { DistributedTokenLedger } from '../token/token-ledger';
 import { ProtocolEvent } from '../types';
 
 export class OperatorAPIServer {
@@ -8,6 +10,8 @@ export class OperatorAPIServer {
   private node: OperatorNode;
   private port: number;
   private walletAPI: WalletAPI;
+  private tokenAPI: TokenAPI;
+  private tokenLedger: DistributedTokenLedger;
 
   constructor(node: OperatorNode, port: number = 3000) {
     this.app = express();
@@ -16,6 +20,20 @@ export class OperatorAPIServer {
     
     const network = process.env.BITCOIN_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
     this.walletAPI = new WalletAPI(network);
+    
+    const operatorId = process.env.OPERATOR_ID || 'operator-1';
+    const quorumM = parseInt(process.env.QUORUM_M || '3');
+    const quorumN = parseInt(process.env.QUORUM_N || '5');
+    const peerOperators = process.env.PEER_OPERATORS?.split(',') || [];
+    
+    this.tokenLedger = new DistributedTokenLedger(
+      operatorId,
+      node.getOperatorInfo().publicKey,
+      quorumM,
+      quorumN,
+      peerOperators
+    );
+    this.tokenAPI = new TokenAPI(this.tokenLedger);
     
     this.setupMiddleware();
     this.setupRoutes();
@@ -172,6 +190,19 @@ export class OperatorAPIServer {
     this.app.post('/api/wallet/restore', this.walletAPI.restoreWallet.bind(this.walletAPI));
     this.app.post('/api/wallet/validate', this.walletAPI.validateAddress.bind(this.walletAPI));
     this.app.post('/api/wallet/import', this.walletAPI.importWallet.bind(this.walletAPI));
+
+    // Token API endpoints
+    this.app.post('/api/token/mint', this.tokenAPI.mintTokens.bind(this.tokenAPI));
+    this.app.post('/api/token/sell', this.tokenAPI.sellTokens.bind(this.tokenAPI));
+    this.app.post('/api/token/embed', this.tokenAPI.embedItemData.bind(this.tokenAPI));
+    this.app.post('/api/token/transfer', this.tokenAPI.transferToken.bind(this.tokenAPI));
+    this.app.get('/api/token/:tokenId', this.tokenAPI.getToken.bind(this.tokenAPI));
+    this.app.get('/api/token/:tokenId/history', this.tokenAPI.getTokenHistory.bind(this.tokenAPI));
+    this.app.get('/api/token/owner/:address', this.tokenAPI.getTokensByOwner.bind(this.tokenAPI));
+    this.app.get('/api/token/stats', this.tokenAPI.getStats.bind(this.tokenAPI));
+    this.app.post('/api/token/validate', this.tokenAPI.validateTransaction.bind(this.tokenAPI));
+    this.app.get('/api/token/ledger/export', this.tokenAPI.exportLedger.bind(this.tokenAPI));
+    this.app.post('/api/token/ledger/import', this.tokenAPI.importLedger.bind(this.tokenAPI));
   }
 
   async start(): Promise<void> {
