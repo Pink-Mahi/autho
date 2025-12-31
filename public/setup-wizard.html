@@ -399,26 +399,53 @@
             }
         }
 
-        function generateWallet() {
-            // Simulated wallet generation (in production, use actual crypto libraries)
-            const words = ['abandon', 'ability', 'able', 'about', 'above', 'absent', 'absorb', 'abstract', 
-                          'absurd', 'abuse', 'access', 'accident', 'account', 'accuse', 'achieve', 'acid',
-                          'acoustic', 'acquire', 'across', 'act', 'action', 'actor', 'actress', 'actual'];
-            
-            const mnemonicWords = document.getElementById('mnemonicWords');
-            mnemonicWords.innerHTML = '';
-            
-            words.forEach((word, i) => {
-                const div = document.createElement('div');
-                div.className = 'mnemonic-word';
-                div.textContent = `${i + 1}. ${word}`;
-                mnemonicWords.appendChild(div);
-            });
+        async function generateWallet() {
+            try {
+                // Call real wallet generation API
+                const response = await fetch('/api/wallet/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
 
-            walletData.mnemonic = words.join(' ');
-            walletData.address = 'bc1q' + Math.random().toString(36).substring(2, 42);
-            
-            document.getElementById('generatedAddress').textContent = walletData.address;
+                if (!response.ok) {
+                    throw new Error('Failed to generate wallet');
+                }
+
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Wallet generation failed');
+                }
+
+                const wallet = data.wallet;
+                const mnemonicWords = document.getElementById('mnemonicWords');
+                mnemonicWords.innerHTML = '';
+                
+                // Display real 24-word mnemonic
+                const words = wallet.mnemonic.split(' ');
+                words.forEach((word, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'mnemonic-word';
+                    div.textContent = `${i + 1}. ${word}`;
+                    mnemonicWords.appendChild(div);
+                });
+
+                // Store real wallet data
+                walletData.mnemonic = wallet.mnemonic;
+                walletData.address = wallet.address;
+                walletData.publicKey = wallet.publicKey;
+                walletData.derivationPath = wallet.derivationPath;
+                walletData.network = wallet.network;
+                
+                document.getElementById('generatedAddress').textContent = wallet.address;
+                
+                console.log('✅ Real Bitcoin wallet generated:', wallet.address);
+            } catch (error) {
+                console.error('Wallet generation error:', error);
+                alert('Failed to generate wallet. Please try again or contact support.');
+            }
         }
 
         function copyMnemonic() {

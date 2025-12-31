@@ -1,16 +1,22 @@
-import express, { Request, Response } from 'express';
+import express, { Express, Request, Response } from 'express';
 import { OperatorNode } from './node';
+import { WalletAPI } from '../api/wallet-api';
 import { ProtocolEvent } from '../types';
 
 export class OperatorAPIServer {
-  private app: express.Application;
+  private app: Express;
   private node: OperatorNode;
   private port: number;
+  private walletAPI: WalletAPI;
 
-  constructor(node: OperatorNode, port: number) {
+  constructor(node: OperatorNode, port: number = 3000) {
     this.app = express();
     this.node = node;
     this.port = port;
+    
+    const network = process.env.BITCOIN_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
+    this.walletAPI = new WalletAPI(network);
+    
     this.setupMiddleware();
     this.setupRoutes();
   }
@@ -156,6 +162,12 @@ export class OperatorAPIServer {
         res.status(500).json({ error: error.message });
       }
     });
+
+    // Wallet API endpoints
+    this.app.post('/api/wallet/create', this.walletAPI.createWallet.bind(this.walletAPI));
+    this.app.post('/api/wallet/restore', this.walletAPI.restoreWallet.bind(this.walletAPI));
+    this.app.post('/api/wallet/validate', this.walletAPI.validateAddress.bind(this.walletAPI));
+    this.app.post('/api/wallet/import', this.walletAPI.importWallet.bind(this.walletAPI));
   }
 
   async start(): Promise<void> {
