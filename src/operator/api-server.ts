@@ -76,6 +76,10 @@ export class OperatorAPIServer {
       res.sendFile('manufacturer-dashboard.html', { root: './public' });
     });
 
+    this.app.get('/tokens', (req: Request, res: Response) => {
+      res.sendFile('token-dashboard.html', { root: './public' });
+    });
+
     this.app.get('/health', (req: Request, res: Response) => {
       res.json({ status: 'healthy', operator: this.node.getOperatorInfo() });
     });
