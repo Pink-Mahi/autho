@@ -509,6 +509,8 @@
         function goToDashboard() {
             if (selectedRole === 'operator') {
                 window.location.href = '/dashboard';
+            } else if (selectedRole === 'manufacturer') {
+                window.location.href = '/manufacturer';
             } else {
                 window.location.href = '/scan';
             }

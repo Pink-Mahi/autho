@@ -54,6 +54,10 @@ export class OperatorAPIServer {
       res.sendFile('setup-wizard.html', { root: './public' });
     });
 
+    this.app.get('/manufacturer', (req: Request, res: Response) => {
+      res.sendFile('manufacturer-dashboard.html', { root: './public' });
+    });
+
     this.app.get('/health', (req: Request, res: Response) => {
       res.json({ status: 'healthy', operator: this.node.getOperatorInfo() });
     });
