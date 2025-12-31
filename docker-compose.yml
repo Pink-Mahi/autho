@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  main-node:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bitcoin-ownership-main-node
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Operator Configuration
+      - OPERATOR_ID=${OPERATOR_ID:-main-node}
+      - OPERATOR_NAME=${OPERATOR_NAME:-Main Node}
+      - OPERATOR_PORT=3000
+      - OPERATOR_DATA_DIR=/app/operator-data
+      
+      # Main Node Bitcoin Address (REQUIRED)
+      - OPERATOR_BTC_ADDRESS=${OPERATOR_BTC_ADDRESS}
+      
+      # Fee Distribution (Main Node gets 60%)
+      - MAIN_NODE_ID=${OPERATOR_ID:-main-node}
+      - MAIN_NODE_FEE_PERCENTAGE=60
+      - OPERATOR_FEE_PERCENTAGE=40
+      
+      # Quorum Configuration
+      - QUORUM_M=${QUORUM_M:-3}
+      - QUORUM_N=${QUORUM_N:-5}
+      
+      # Peer Operators
+      - PEER_OPERATORS=${PEER_OPERATORS:-}
+      
+      # Network
+      - BITCOIN_NETWORK=${BITCOIN_NETWORK:-mainnet}
+      
+      # API Configuration
+      - API_CORS_ORIGIN=${API_CORS_ORIGIN:-*}
+      - API_RATE_LIMIT=${API_RATE_LIMIT:-100}
+      
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - NODE_ENV=production
+    
+    volumes:
+      # Persist operator data
+      - operator-data:/app/operator-data
+      # Optional: Mount custom config
+      # - ./config:/app/config:ro
+    
+    networks:
+      - bitcoin-ownership-network
+    
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "coolify.managed=true"
+
+volumes:
+  operator-data:
+    driver: local
+
+networks:
+  bitcoin-ownership-network:
+    driver: bridge
