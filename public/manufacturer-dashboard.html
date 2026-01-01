@@ -502,50 +502,87 @@
         async function mintItem(event) {
             event.preventDefault();
 
+            const manufacturerId = 'mfr_' + (userConfig.wallet?.address?.substr(0, 10) || Date.now());
+            
             const itemData = {
-                itemId: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-                name: document.getElementById('productName').value,
-                description: document.getElementById('productDescription').value,
                 serialNumber: document.getElementById('serialNumber').value,
+                itemType: document.getElementById('productName').value,
+                description: document.getElementById('productDescription').value,
+                manufacturerId: manufacturerId,
                 category: document.getElementById('category').value,
-                price: document.getElementById('price').value,
-                manufacturer: userConfig.name || 'Unknown',
-                manufacturerId: 'mfr_' + (userConfig.wallet?.address?.substr(0, 10) || 'unknown'),
-                timestamp: Date.now(),
-                verified: false
+                price: document.getElementById('price').value
             };
 
-            // Save to local storage
-            mintedItems.push(itemData);
-            localStorage.setItem('mintedItems', JSON.stringify(mintedItems));
-
-            // Generate QR code
-            const qrCanvas = document.getElementById('qrCanvas');
-            await QRCode.toCanvas(qrCanvas, itemData.itemId, {
-                width: 300,
-                margin: 2,
-                color: {
-                    dark: '#667eea',
-                    light: '#ffffff'
-                }
-            });
-
-            // Show success
-            document.getElementById('generatedItemId').textContent = itemData.itemId;
-            document.getElementById('mintSuccess').classList.add('active');
-            document.getElementById('qrCodeDisplay').style.display = 'block';
-            document.getElementById('mintBtn').textContent = '✅ Item Minted!';
+            // Disable button
+            document.getElementById('mintBtn').textContent = '⏳ Registering...';
             document.getElementById('mintBtn').disabled = true;
 
-            // Update display
-            updateStats();
-            displayRecentItems();
+            try {
+                // Register item with the operator node
+                const response = await fetch('/api/registry/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(itemData)
+                });
 
-            // Reset after 3 seconds
-            setTimeout(() => {
+                if (!response.ok) {
+                    throw new Error('Failed to register item');
+                }
+
+                const result = await response.json();
+                const itemId = result.itemId;
+
+                // Save to local storage for quick access
+                const localItem = {
+                    itemId,
+                    name: itemData.itemType,
+                    description: itemData.description,
+                    serialNumber: itemData.serialNumber,
+                    category: itemData.category,
+                    price: itemData.price,
+                    manufacturer: userConfig.name || 'Unknown',
+                    manufacturerId: itemData.manufacturerId,
+                    timestamp: Date.now(),
+                    verified: true
+                };
+                
+                mintedItems.push(localItem);
+                localStorage.setItem('mintedItems', JSON.stringify(mintedItems));
+
+                // Generate QR code
+                const qrCanvas = document.getElementById('qrCanvas');
+                await QRCode.toCanvas(qrCanvas, itemId, {
+                    width: 300,
+                    margin: 2,
+                    color: {
+                        dark: '#667eea',
+                        light: '#ffffff'
+                    }
+                });
+
+                // Show success
+                document.getElementById('generatedItemId').textContent = itemId;
+                document.getElementById('mintSuccess').classList.add('active');
+                document.getElementById('qrCodeDisplay').style.display = 'block';
+                document.getElementById('mintBtn').textContent = '✅ Item Registered!';
+
+                // Update display
+                updateStats();
+                displayRecentItems();
+
+                // Reset after 3 seconds
+                setTimeout(() => {
+                    document.getElementById('mintBtn').textContent = '⚡ Mint Item (5,000 sats)';
+                    document.getElementById('mintBtn').disabled = false;
+                }, 3000);
+            } catch (error) {
+                console.error('Error registering item:', error);
+                alert('Failed to register item: ' + error.message);
                 document.getElementById('mintBtn').textContent = '⚡ Mint Item (5,000 sats)';
                 document.getElementById('mintBtn').disabled = false;
-            }, 3000);
+            }
         }
 
         function downloadQR() {

@@ -234,6 +234,134 @@ export class OperatorAPIServer {
       }
     });
 
+    // Registry API endpoints
+    this.app.post('/api/registry/register', async (req: Request, res: Response) => {
+      try {
+        const { serialNumber, itemType, description, manufacturerId } = req.body;
+        
+        if (!serialNumber || !itemType || !manufacturerId) {
+          res.status(400).json({ error: 'Missing required fields: serialNumber, itemType, manufacturerId' });
+          return;
+        }
+
+        const itemId = `ITEM_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        
+        // Create ITEM_REGISTERED event
+        const event = {
+          eventType: 'ITEM_REGISTERED',
+          data: {
+            itemId,
+            serialNumber,
+            itemType,
+            description: description || '',
+            manufacturerId,
+            registeredAt: Date.now(),
+            owner: manufacturerId
+          },
+          timestamp: Date.now(),
+          nonce: Math.random().toString(36).substring(7)
+        };
+
+        const result = await this.node.proposeEvent(event as any);
+        res.json({ 
+          success: true, 
+          itemId,
+          eventId: (result as any).eventId,
+          message: 'Item registered successfully'
+        });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/registry/items', async (req: Request, res: Response) => {
+      try {
+        // Mock implementation - in production, query from event log
+        const items = (this.node as any).getAllItems ? await (this.node as any).getAllItems() : [];
+        res.json({ items });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/registry/item/:itemId', async (req: Request, res: Response) => {
+      try {
+        const item = await this.node.getItem(req.params.itemId);
+        if (!item) {
+          res.status(404).json({ error: 'Item not found' });
+          return;
+        }
+        res.json(item);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.post('/api/registry/transfer', async (req: Request, res: Response) => {
+      try {
+        const { itemId, fromOwner, toOwner, paymentTxId, signature } = req.body;
+        
+        if (!itemId || !fromOwner || !toOwner || !paymentTxId) {
+          res.status(400).json({ error: 'Missing required fields' });
+          return;
+        }
+
+        const event = {
+          eventType: 'ITEM_TRANSFERRED',
+          data: {
+            itemId,
+            fromOwner,
+            toOwner,
+            paymentTxId,
+            transferredAt: Date.now()
+          },
+          timestamp: Date.now(),
+          nonce: Math.random().toString(36).substring(7)
+        };
+
+        const result = await this.node.proposeEvent(event as any);
+        res.json({ 
+          success: true, 
+          eventId: (result as any).eventId,
+          message: 'Transfer recorded successfully'
+        });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.post('/api/registry/authenticate', async (req: Request, res: Response) => {
+      try {
+        const { itemId, authenticatorId, result: authResult } = req.body;
+        
+        if (!itemId || !authenticatorId || !authResult) {
+          res.status(400).json({ error: 'Missing required fields' });
+          return;
+        }
+
+        const event = {
+          eventType: 'ITEM_AUTHENTICATED',
+          data: {
+            itemId,
+            authenticatorId,
+            result: authResult,
+            authenticatedAt: Date.now()
+          },
+          timestamp: Date.now(),
+          nonce: Math.random().toString(36).substring(7)
+        };
+
+        const result = await this.node.proposeEvent(event as any);
+        res.json({ 
+          success: true, 
+          eventId: (result as any).eventId,
+          message: 'Authentication recorded successfully'
+        });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
     this.app.post('/api/event/sign', async (req: Request, res: Response) => {
       try {
         const event: ProtocolEvent = req.body;
