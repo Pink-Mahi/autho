@@ -3,6 +3,8 @@ import { OperatorNode } from './node';
 import { WalletAPI } from '../api/wallet-api';
 import { RegistryAPI } from '../registry/registry-api';
 import { ItemRegistry } from '../registry/item-registry';
+import { JoinAPI } from '../network/join-api';
+import { NetworkBootstrap } from '../network/bootstrap';
 import { ProtocolEvent } from '../types';
 
 export class OperatorAPIServer {
@@ -12,6 +14,8 @@ export class OperatorAPIServer {
   private walletAPI: WalletAPI;
   private registryAPI: RegistryAPI;
   private itemRegistry: ItemRegistry;
+  private joinAPI: JoinAPI;
+  private bootstrap: NetworkBootstrap;
 
   constructor(node: OperatorNode, port: number = 3000) {
     this.app = express();
@@ -34,6 +38,23 @@ export class OperatorAPIServer {
       peerOperators
     );
     this.registryAPI = new RegistryAPI(this.itemRegistry);
+    
+    // Initialize P2P network components
+    const gatewayEndpoint = process.env.GATEWAY_ENDPOINT || 'localhost:8333';
+    const chainId = process.env.CHAIN_ID || 'bitcoin-mainnet';
+    
+    this.joinAPI = new JoinAPI(
+      gatewayEndpoint,
+      node.getOperatorInfo().publicKey,
+      chainId,
+      'Bitcoin Ownership Protocol'
+    );
+    
+    this.bootstrap = new NetworkBootstrap(
+      chainId,
+      peerOperators,
+      node.getOperatorInfo().publicKey
+    );
     
     this.setupMiddleware();
     this.setupRoutes();
@@ -78,6 +99,11 @@ export class OperatorAPIServer {
 
     this.app.get('/tokens', (req: Request, res: Response) => {
       res.sendFile('token-dashboard.html', { root: './public' });
+    });
+
+    // P2P Network Join Page
+    this.app.get('/join', (req: Request, res: Response) => {
+      res.sendFile('join.html', { root: './public' });
     });
 
     this.app.get('/health', (req: Request, res: Response) => {
@@ -206,6 +232,14 @@ export class OperatorAPIServer {
     this.app.get('/api/registry/stats', this.registryAPI.getStats.bind(this.registryAPI));
     this.app.get('/api/registry/export', this.registryAPI.exportLedger.bind(this.registryAPI));
     this.app.post('/api/registry/import', this.registryAPI.importLedger.bind(this.registryAPI));
+
+    // P2P Network Join API endpoints
+    this.app.get('/api/join/config', this.joinAPI.getJoinConfig.bind(this.joinAPI));
+    this.app.get('/bootstrap.json', this.joinAPI.getBootstrapConfig.bind(this.joinAPI));
+    this.app.get('/seed-manifest.json', this.joinAPI.getSeedManifest.bind(this.joinAPI));
+    this.app.post('/api/join/verify-bootstrap', this.joinAPI.verifyBootstrapConfig.bind(this.joinAPI));
+    this.app.get('/api/join/peers', this.joinAPI.getPeers.bind(this.joinAPI));
+    this.app.get('/api/join/network-stats', this.joinAPI.getNetworkStats.bind(this.joinAPI));
   }
 
   async start(): Promise<void> {
