@@ -1,8 +1,8 @@
 import express, { Express, Request, Response } from 'express';
 import { OperatorNode } from './node';
 import { WalletAPI } from '../api/wallet-api';
-import { TokenAPI } from '../token/token-api';
-import { DistributedTokenLedger } from '../token/token-ledger';
+import { RegistryAPI } from '../registry/registry-api';
+import { ItemRegistry } from '../registry/item-registry';
 import { ProtocolEvent } from '../types';
 
 export class OperatorAPIServer {
@@ -10,8 +10,8 @@ export class OperatorAPIServer {
   private node: OperatorNode;
   private port: number;
   private walletAPI: WalletAPI;
-  private tokenAPI: TokenAPI;
-  private tokenLedger: DistributedTokenLedger;
+  private registryAPI: RegistryAPI;
+  private itemRegistry: ItemRegistry;
 
   constructor(node: OperatorNode, port: number = 3000) {
     this.app = express();
@@ -26,14 +26,14 @@ export class OperatorAPIServer {
     const quorumN = parseInt(process.env.QUORUM_N || '5');
     const peerOperators = process.env.PEER_OPERATORS?.split(',') || [];
     
-    this.tokenLedger = new DistributedTokenLedger(
+    this.itemRegistry = new ItemRegistry(
       operatorId,
       node.getOperatorInfo().publicKey,
       quorumM,
       quorumN,
       peerOperators
     );
-    this.tokenAPI = new TokenAPI(this.tokenLedger);
+    this.registryAPI = new RegistryAPI(this.itemRegistry);
     
     this.setupMiddleware();
     this.setupRoutes();
@@ -195,18 +195,17 @@ export class OperatorAPIServer {
     this.app.post('/api/wallet/validate', this.walletAPI.validateAddress.bind(this.walletAPI));
     this.app.post('/api/wallet/import', this.walletAPI.importWallet.bind(this.walletAPI));
 
-    // Token API endpoints
-    this.app.post('/api/token/mint', this.tokenAPI.mintTokens.bind(this.tokenAPI));
-    this.app.post('/api/token/sell', this.tokenAPI.sellTokens.bind(this.tokenAPI));
-    this.app.post('/api/token/embed', this.tokenAPI.embedItemData.bind(this.tokenAPI));
-    this.app.post('/api/token/transfer', this.tokenAPI.transferToken.bind(this.tokenAPI));
-    this.app.get('/api/token/:tokenId', this.tokenAPI.getToken.bind(this.tokenAPI));
-    this.app.get('/api/token/:tokenId/history', this.tokenAPI.getTokenHistory.bind(this.tokenAPI));
-    this.app.get('/api/token/owner/:address', this.tokenAPI.getTokensByOwner.bind(this.tokenAPI));
-    this.app.get('/api/token/stats', this.tokenAPI.getStats.bind(this.tokenAPI));
-    this.app.post('/api/token/validate', this.tokenAPI.validateTransaction.bind(this.tokenAPI));
-    this.app.get('/api/token/ledger/export', this.tokenAPI.exportLedger.bind(this.tokenAPI));
-    this.app.post('/api/token/ledger/import', this.tokenAPI.importLedger.bind(this.tokenAPI));
+    // Registry API endpoints (regulatory compliant)
+    this.app.post('/api/registry/item', this.registryAPI.registerItem.bind(this.registryAPI));
+    this.app.post('/api/registry/transfer', this.registryAPI.transferOwnership.bind(this.registryAPI));
+    this.app.post('/api/registry/authenticate', this.registryAPI.authenticateItem.bind(this.registryAPI));
+    this.app.get('/api/registry/item/:itemId', this.registryAPI.getItem.bind(this.registryAPI));
+    this.app.get('/api/registry/item/:itemId/history', this.registryAPI.getOwnershipHistory.bind(this.registryAPI));
+    this.app.get('/api/registry/owner/:address', this.registryAPI.getItemsByOwner.bind(this.registryAPI));
+    this.app.get('/api/registry/manufacturer/:manufacturerId', this.registryAPI.getItemsByManufacturer.bind(this.registryAPI));
+    this.app.get('/api/registry/stats', this.registryAPI.getStats.bind(this.registryAPI));
+    this.app.get('/api/registry/export', this.registryAPI.exportLedger.bind(this.registryAPI));
+    this.app.post('/api/registry/import', this.registryAPI.importLedger.bind(this.registryAPI));
   }
 
   async start(): Promise<void> {

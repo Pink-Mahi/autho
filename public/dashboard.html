@@ -367,7 +367,7 @@
             <p>Bitcoin Ownership Protocol - Admin Control Center</p>
             <div class="nav-tabs">
                 <button class="nav-tab active" onclick="switchTab('overview')">📊 Overview</button>
-                <button class="nav-tab" onclick="switchTab('tokens')">🪙 Token Management</button>
+                <button class="nav-tab" onclick="switchTab('registry')">📦 Item Registry</button>
                 <button class="nav-tab" onclick="switchTab('network')">🌐 Network Status</button>
                 <button class="nav-tab" onclick="switchTab('revenue')">💰 Revenue</button>
             </div>
@@ -387,9 +387,9 @@
                     <div class="stat-value" id="itemsTracked">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">🪙</div>
-                    <div class="stat-label">Tokens Minted</div>
-                    <div class="stat-value" id="tokensMinted">0</div>
+                    <div class="stat-icon">📝</div>
+                    <div class="stat-label">Items Registered</div>
+                    <div class="stat-value" id="itemsRegistered">0</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">💰</div>
@@ -405,91 +405,99 @@
 
             <div style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
                 <h2 class="section-title">⚡ Quick Actions</h2>
-                <button class="btn" onclick="switchTab('tokens')">🪙 Mint Tokens</button>
-                <button class="btn btn-success" onclick="switchTab('tokens')">💰 Sell Tokens</button>
+                <button class="btn" onclick="switchTab('registry')">📝 Register Items</button>
+                <button class="btn btn-success" onclick="switchTab('registry')">🔄 Transfer Ownership</button>
                 <button class="btn" onclick="window.location.href='/scan'">🔍 Scan Items</button>
                 <button class="btn" onclick="window.location.href='/setup'">👥 User Setup</button>
             </div>
         </div>
 
-        <!-- Token Management Tab -->
-        <div class="section" id="tokens-section">
-            <h2 class="section-title">🪙 Token Management</h2>
+        <!-- Item Registry Tab -->
+        <div class="section" id="registry-section">
+            <h2 class="section-title">📦 Item Registry</h2>
             
             <div class="stats-grid" style="margin-bottom: 30px;">
                 <div class="stat-card">
-                    <div class="stat-icon">🪙</div>
-                    <div class="stat-label">Total Tokens</div>
-                    <div class="stat-value" id="totalTokens">0</div>
+                    <div class="stat-icon">📝</div>
+                    <div class="stat-label">Total Items</div>
+                    <div class="stat-value" id="totalItems">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">📦</div>
-                    <div class="stat-label">Available for Sale</div>
-                    <div class="stat-value" id="availableTokens">0</div>
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-label">Total Owners</div>
+                    <div class="stat-value" id="totalOwners">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">💵</div>
-                    <div class="stat-label">Tokens Sold</div>
-                    <div class="stat-value" id="tokensSold">0</div>
+                    <div class="stat-icon">🔄</div>
+                    <div class="stat-label">Ownership Transfers</div>
+                    <div class="stat-value" id="totalTransfers">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">💰</div>
-                    <div class="stat-label">Token Revenue</div>
-                    <div class="stat-value" id="tokenRevenue">$0</div>
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-label">Authentications</div>
+                    <div class="stat-value" id="totalAuthentications">0</div>
                 </div>
             </div>
 
-            <!-- Mint Tokens -->
-            <div style="background: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 20px;">
-                <h3 style="margin-bottom: 15px;">⚡ Mint New Tokens</h3>
-                <div class="success-message" id="mintSuccess"></div>
-                <div class="error-message" id="mintError"></div>
-                <form id="mintForm" onsubmit="mintTokens(event)">
+            <!-- Register Item -->
+            <div style="background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%); border: 1px solid #d4af37; padding: 25px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="margin-bottom: 15px; color: #d4af37;">📝 Register Physical Item</h3>
+                <div class="success-message" id="registerSuccess"></div>
+                <div class="error-message" id="registerError"></div>
+                <form id="registerForm" onsubmit="registerItem(event)">
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Quantity *</label>
-                            <input type="number" id="mintQuantity" required min="1" max="10000" placeholder="e.g., 100">
+                            <label>Serial Number *</label>
+                            <input type="text" id="serialNumber" required placeholder="e.g., TW-2025-001">
                         </div>
                         <div class="form-group">
-                            <label>Batch ID (optional)</label>
-                            <input type="text" id="batchId" placeholder="e.g., BATCH_2025_01">
-                        </div>
-                    </div>
-                    <button type="submit" class="btn">⚡ Mint Tokens</button>
-                </form>
-            </div>
-
-            <!-- Sell Tokens -->
-            <div style="background: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 20px;">
-                <h3 style="margin-bottom: 15px;">💰 Sell Tokens to Manufacturer</h3>
-                <div class="success-message" id="sellSuccess"></div>
-                <div class="error-message" id="sellError"></div>
-                <form id="sellForm" onsubmit="sellTokens(event)">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Manufacturer Bitcoin Address *</label>
-                            <input type="text" id="buyerAddress" required placeholder="bc1q...">
-                        </div>
-                        <div class="form-group">
-                            <label>Number of Tokens *</label>
-                            <input type="number" id="tokenQuantity" required min="1" placeholder="e.g., 10">
+                            <label>Item Type *</label>
+                            <input type="text" id="itemType" required placeholder="e.g., Limited Edition Wallet">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Price per Token (USD) *</label>
-                        <input type="number" id="tokenPrice" required min="0.01" step="0.01" value="10.00" placeholder="10.00">
+                        <label>Description *</label>
+                        <input type="text" id="itemDescription" required placeholder="e.g., Tesla Cybertruck Edition">
                     </div>
-                    <div style="background: #e7f3ff; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                        <strong>Total Price:</strong> $<span id="totalPrice">0.00</span>
+                    <div class="form-group">
+                        <label>Manufacturer ID *</label>
+                        <input type="text" id="manufacturerId" required placeholder="e.g., Tesla">
                     </div>
-                    <button type="submit" class="btn btn-success">💰 Sell Tokens</button>
+                    <button type="submit" class="btn">📝 Register Item</button>
                 </form>
             </div>
 
-            <!-- Token Inventory -->
+            <!-- Transfer Ownership -->
+            <div style="background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%); border: 1px solid #d4af37; padding: 25px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="margin-bottom: 15px; color: #d4af37;">🔄 Transfer Item Ownership</h3>
+                <div class="success-message" id="transferSuccess"></div>
+                <div class="error-message" id="transferError"></div>
+                <form id="transferForm" onsubmit="transferOwnership(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Item ID *</label>
+                            <input type="text" id="itemId" required placeholder="ITEM_abc123...">
+                        </div>
+                        <div class="form-group">
+                            <label>New Owner Address *</label>
+                            <input type="text" id="newOwnerAddress" required placeholder="bc1q...">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Transaction Hash *</label>
+                        <input type="text" id="paymentTxHash" required placeholder="Bitcoin transaction hash">
+                    </div>
+                    <div style="background: rgba(212, 175, 55, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #d4af37;">
+                        <strong style="color: #d4af37;">Note:</strong> <span style="color: #999;">Payment must be completed peer-to-peer before transfer</span>
+                    </div>
+                    <button type="submit" class="btn btn-success">🔄 Transfer Ownership</button>
+                </form>
+            </div>
+
+            <!-- Item Registry -->
             <div>
-                <h3 style="margin-bottom: 15px;">📦 Token Inventory</h3>
-                <div id="tokenInventory" class="empty-state">No tokens minted yet</div>
+                <h3 style="margin-bottom: 15px; color: #d4af37;">📦 Registered Items</h3>
+                <div id="itemInventory" class="empty-state">No items registered yet</div>
             </div>
         </div>
 
@@ -564,15 +572,15 @@
     </div>
 
     <script>
-        let tokenStats = {
-            totalTokens: 0,
-            availableTokens: 0,
-            tokensSold: 0,
-            tokenRevenue: 0
+        let registryStats = {
+            totalItems: 0,
+            totalOwners: 0,
+            totalTransfers: 0,
+            totalAuthentications: 0
         };
 
-        let allTokens = [];
-        let salesHistory = [];
+        let allItems = [];
+        let transferHistory = [];
 
         function switchTab(tab) {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -581,8 +589,8 @@
             event.target.classList.add('active');
             document.getElementById(`${tab}-section`).classList.add('active');
 
-            if (tab === 'tokens') {
-                loadTokenStats();
+            if (tab === 'registry') {
+                loadRegistryStats();
             } else if (tab === 'network') {
                 loadNetworkStatus();
             } else if (tab === 'revenue') {
@@ -590,129 +598,132 @@
             }
         }
 
-        async function mintTokens(event) {
+        async function registerItem(event) {
             event.preventDefault();
-            const quantity = parseInt(document.getElementById('mintQuantity').value);
-            const batchId = document.getElementById('batchId').value;
+            const serialNumber = document.getElementById('serialNumber').value;
+            const itemType = document.getElementById('itemType').value;
+            const itemDescription = document.getElementById('itemDescription').value;
+            const manufacturerId = document.getElementById('manufacturerId').value;
 
             try {
-                const response = await fetch('/api/token/mint', {
+                const response = await fetch('/api/registry/item', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        quantity,
-                        mintedBy: 'main-node',
-                        batchId: batchId || undefined
+                        manufacturerId,
+                        serialNumber,
+                        metadata: {
+                            itemType,
+                            description: itemDescription,
+                            manufacturingDate: Date.now()
+                        },
+                        initialOwner: manufacturerId,
+                        manufacturerSignature: 'sig_' + Date.now()
                     })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    document.getElementById('mintSuccess').textContent = `✅ Successfully minted ${quantity} tokens!`;
-                    document.getElementById('mintSuccess').classList.add('active');
-                    document.getElementById('mintError').classList.remove('active');
+                    document.getElementById('registerSuccess').textContent = `✅ Successfully registered item!`;
+                    document.getElementById('registerSuccess').classList.add('active');
+                    document.getElementById('registerError').classList.remove('active');
                     
-                    allTokens.push(...data.tokens);
-                    updateTokenStats();
-                    document.getElementById('mintForm').reset();
+                    allItems.push(data.itemRecord);
+                    updateRegistryStats();
+                    document.getElementById('registerForm').reset();
                     
                     setTimeout(() => {
-                        document.getElementById('mintSuccess').classList.remove('active');
+                        document.getElementById('registerSuccess').classList.remove('active');
                     }, 5000);
                 } else {
                     throw new Error(data.error);
                 }
             } catch (error) {
-                document.getElementById('mintError').textContent = `❌ Error: ${error.message}`;
-                document.getElementById('mintError').classList.add('active');
+                document.getElementById('registerError').textContent = `❌ Error: ${error.message}`;
+                document.getElementById('registerError').classList.add('active');
             }
         }
 
-        async function sellTokens(event) {
+        async function transferOwnership(event) {
             event.preventDefault();
-            const buyerAddress = document.getElementById('buyerAddress').value;
-            const quantity = parseInt(document.getElementById('tokenQuantity').value);
-            const price = parseFloat(document.getElementById('tokenPrice').value);
+            const itemId = document.getElementById('itemId').value;
+            const newOwnerAddress = document.getElementById('newOwnerAddress').value;
+            const paymentTxHash = document.getElementById('paymentTxHash').value;
 
-            const availableTokens = allTokens.filter(t => t.status === 'minted' && t.owner === 'main-node');
+            const item = allItems.find(i => i.itemId === itemId);
             
-            if (availableTokens.length < quantity) {
-                document.getElementById('sellError').textContent = `❌ Not enough tokens. You have ${availableTokens.length} available.`;
-                document.getElementById('sellError').classList.add('active');
+            if (!item) {
+                document.getElementById('transferError').textContent = `❌ Item not found in registry.`;
+                document.getElementById('transferError').classList.add('active');
                 return;
             }
 
-            const tokenIds = availableTokens.slice(0, quantity).map(t => t.tokenId);
-
             try {
-                const response = await fetch('/api/token/sell', {
+                const response = await fetch('/api/registry/transfer', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        tokenIds,
-                        buyer: buyerAddress,
-                        price: price * quantity
+                        itemId,
+                        currentOwner: item.currentOwner,
+                        newOwner: newOwnerAddress,
+                        paymentTxHash,
+                        transferType: 'sale',
+                        currentOwnerSignature: 'sig_' + Date.now()
                     })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    document.getElementById('sellSuccess').textContent = `✅ Sold ${quantity} tokens for $${(price * quantity).toFixed(2)}!`;
-                    document.getElementById('sellSuccess').classList.add('active');
-                    document.getElementById('sellError').classList.remove('active');
+                    document.getElementById('transferSuccess').textContent = `✅ Ownership transferred successfully!`;
+                    document.getElementById('transferSuccess').classList.add('active');
+                    document.getElementById('transferError').classList.remove('active');
                     
-                    tokenIds.forEach(id => {
-                        const token = allTokens.find(t => t.tokenId === id);
-                        if (token) {
-                            token.owner = buyerAddress;
-                            token.status = 'sold';
-                        }
-                    });
+                    item.currentOwner = newOwnerAddress;
 
-                    salesHistory.push({
-                        buyer: buyerAddress,
-                        quantity,
-                        price: price * quantity,
+                    transferHistory.push({
+                        itemId,
+                        previousOwner: data.itemRecord.previousOwner,
+                        newOwner: newOwnerAddress,
                         timestamp: Date.now()
                     });
 
-                    updateTokenStats();
-                    document.getElementById('sellForm').reset();
+                    updateRegistryStats();
+                    document.getElementById('transferForm').reset();
                     
                     setTimeout(() => {
-                        document.getElementById('sellSuccess').classList.remove('active');
+                        document.getElementById('transferSuccess').classList.remove('active');
                     }, 5000);
                 } else {
                     throw new Error(data.error);
                 }
             } catch (error) {
-                document.getElementById('sellError').textContent = `❌ Error: ${error.message}`;
-                document.getElementById('sellError').classList.add('active');
+                document.getElementById('transferError').textContent = `❌ Error: ${error.message}`;
+                document.getElementById('transferError').classList.add('active');
             }
         }
 
-        function updateTokenStats() {
-            tokenStats.totalTokens = allTokens.length;
-            tokenStats.availableTokens = allTokens.filter(t => t.status === 'minted' && t.owner === 'main-node').length;
-            tokenStats.tokensSold = allTokens.filter(t => t.owner !== 'main-node').length;
-            tokenStats.tokenRevenue = salesHistory.reduce((sum, sale) => sum + sale.price, 0);
+        function updateRegistryStats() {
+            registryStats.totalItems = allItems.length;
+            registryStats.totalOwners = new Set(allItems.map(i => i.currentOwner)).size;
+            registryStats.totalTransfers = transferHistory.length;
+            registryStats.totalAuthentications = allItems.reduce((sum, item) => sum + (item.authentications?.length || 0), 0);
 
-            document.getElementById('totalTokens').textContent = tokenStats.totalTokens;
-            document.getElementById('availableTokens').textContent = tokenStats.availableTokens;
-            document.getElementById('tokensSold').textContent = tokenStats.tokensSold;
-            document.getElementById('tokenRevenue').textContent = `$${tokenStats.tokenRevenue.toFixed(2)}`;
-            document.getElementById('tokensMinted').textContent = tokenStats.totalTokens;
-            document.getElementById('totalRevenue').textContent = `$${tokenStats.tokenRevenue.toFixed(2)}`;
+            document.getElementById('totalItems').textContent = registryStats.totalItems;
+            document.getElementById('totalOwners').textContent = registryStats.totalOwners;
+            document.getElementById('totalTransfers').textContent = registryStats.totalTransfers;
+            document.getElementById('totalAuthentications').textContent = registryStats.totalAuthentications;
+            document.getElementById('itemsRegistered').textContent = registryStats.totalItems;
+            document.getElementById('itemsTracked').textContent = registryStats.totalItems;
         }
 
-        function loadTokenStats() {
-            updateTokenStats();
-            const container = document.getElementById('tokenInventory');
+        function loadRegistryStats() {
+            updateRegistryStats();
+            const container = document.getElementById('itemInventory');
             
-            if (allTokens.length === 0) {
-                container.innerHTML = '<div class="empty-state">No tokens minted yet. Use the form above to mint tokens.</div>';
+            if (allItems.length === 0) {
+                container.innerHTML = '<div class="empty-state">No items registered yet. Use the form above to register physical items.</div>';
                 return;
             }
 
@@ -720,19 +731,19 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Token ID</th>
+                            <th>Item ID</th>
                             <th>Status</th>
-                            <th>Owner</th>
-                            <th>Minted At</th>
+                            <th>Current Owner</th>
+                            <th>Registered At</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${allTokens.slice(-10).reverse().map(token => `
+                        ${allItems.slice(-10).reverse().map(item => `
                             <tr>
-                                <td style="font-family: monospace; font-size: 0.85rem;">${token.tokenId.substr(0, 20)}...</td>
-                                <td><span class="status-badge status-online">${token.status}</span></td>
-                                <td style="font-family: monospace; font-size: 0.85rem;">${token.owner.substr(0, 15)}...</td>
-                                <td>${new Date(token.mintedAt).toLocaleString()}</td>
+                                <td style="font-family: monospace; font-size: 0.85rem;">${item.itemId.substr(0, 20)}...</td>
+                                <td><span class="status-badge status-online">${item.status}</span></td>
+                                <td style="font-family: monospace; font-size: 0.85rem;">${item.currentOwner.substr(0, 15)}...</td>
+                                <td>${new Date(item.registeredAt).toLocaleString()}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -793,12 +804,16 @@
         // Load initial stats
         async function loadStats() {
             try {
-                const response = await fetch('/api/token/stats');
+                const response = await fetch('/api/registry/stats');
                 const data = await response.json();
                 if (data.success) {
                     const stats = data.stats;
-                    document.getElementById('totalTokens').textContent = stats.totalTokens;
-                    document.getElementById('tokensMinted').textContent = stats.totalTokens;
+                    document.getElementById('totalItems').textContent = stats.totalItems;
+                    document.getElementById('totalOwners').textContent = stats.totalOwners;
+                    document.getElementById('totalTransfers').textContent = stats.totalTransfers;
+                    document.getElementById('totalAuthentications').textContent = stats.totalAuthentications;
+                    document.getElementById('itemsRegistered').textContent = stats.totalItems;
+                    document.getElementById('itemsTracked').textContent = stats.totalItems;
                 }
             } catch (error) {
                 console.error('Failed to load stats:', error);
