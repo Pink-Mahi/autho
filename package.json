@@ -38,7 +38,8 @@
     "commander": "^11.1.0",
     "chalk": "^4.1.2",
     "qrcode": "^1.5.3",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "speakeasy": "^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
@@ -46,6 +47,7 @@
     "@types/ws": "^8.5.10",
     "@types/qrcode": "^1.5.5",
     "@types/uuid": "^9.0.7",
+    "@types/speakeasy": "^2.0.10",
     "typescript": "^5.3.3",
     "ts-node": "^10.9.2",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
