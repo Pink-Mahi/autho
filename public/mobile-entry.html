@@ -201,6 +201,51 @@
       background: #ff5757;
       color: #fff;
     }
+
+    .logout-btn {
+      background: rgba(255, 59, 48, 0.1);
+      border: 1px solid rgba(255, 59, 48, 0.3);
+      color: #ff3b30;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 10px;
+      display: inline-block;
+    }
+
+    .logout-btn:hover {
+      background: rgba(255, 59, 48, 0.2);
+      border-color: #ff3b30;
+    }
+
+    .wallet-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      justify-content: center;
+    }
+
+    .wallet-btn {
+      background: rgba(212, 175, 55, 0.1);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: #d4af37;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .wallet-btn:hover {
+      background: rgba(212, 175, 55, 0.2);
+      border-color: #d4af37;
+    }
   </style>
 </head>
 <body>
@@ -267,10 +312,16 @@
         
         if (walletData) {
           const wallet = JSON.parse(walletData);
+          const isUnlocked = sessionStorage.getItem('wallet_unlocked') === 'true';
+          
           walletStatus.className = 'wallet-status';
           walletStatus.innerHTML = `
-            <div class="wallet-status-title">Connected Wallet</div>
-            <div class="wallet-status-value">${wallet.publicKey.substring(0, 20)}...${wallet.publicKey.substring(wallet.publicKey.length - 10)}</div>
+            <div class="wallet-status-title">Connected Wallet ${isUnlocked ? '🔓' : '🔒'}</div>
+            <div class="wallet-status-value">${wallet.address ? wallet.address.substring(0, 20) + '...' : wallet.publicKey.substring(0, 20) + '...'}</div>
+            <div class="wallet-actions">
+              ${!isUnlocked ? '<a href="/m/login" class="wallet-btn">🔑 Unlock</a>' : ''}
+              <button class="logout-btn" onclick="logoutWallet()">🚪 Logout</button>
+            </div>
           `;
         } else {
           walletStatus.className = 'wallet-status no-wallet';
@@ -298,6 +349,21 @@
         console.log('Using default branding');
       }
     }
+
+    // Logout function
+    window.logoutWallet = () => {
+      if (confirm('Are you sure you want to logout? You will need your PIN to login again.')) {
+        // Clear session but keep wallet data
+        sessionStorage.removeItem('wallet_unlocked');
+        sessionStorage.removeItem('wallet_unlock_time');
+        
+        // Show success message
+        alert('✅ Logged out successfully. Your wallet is still saved on this device.');
+        
+        // Refresh status
+        checkWalletStatus();
+      }
+    };
 
     // Initialize
     checkWalletStatus();
