@@ -290,6 +290,51 @@
       color: #ccc;
       line-height: 1.5;
     }
+
+    .copy-seed-btn {
+      background: rgba(212, 175, 55, 0.1);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: #d4af37;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 15px 0;
+      width: 100%;
+    }
+
+    .copy-seed-btn:hover {
+      background: rgba(212, 175, 55, 0.2);
+      border-color: #d4af37;
+    }
+
+    .copy-seed-btn:active {
+      transform: scale(0.98);
+    }
+
+    .copy-seed-btn.copied {
+      background: rgba(76, 217, 100, 0.2);
+      border-color: #4cd964;
+      color: #4cd964;
+    }
+
+    .copy-warning {
+      background: rgba(255, 149, 0, 0.1);
+      border: 1px solid rgba(255, 149, 0, 0.3);
+      border-radius: 8px;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 12px;
+      color: #ff9500;
+      text-align: center;
+      line-height: 1.4;
+    }
   </style>
 </head>
 <body>
@@ -348,6 +393,15 @@
       </div>
 
       <div id="seedWords" class="seed-words"></div>
+
+      <button class="copy-seed-btn" onclick="copySeedPhrase()" id="copySeedBtn">
+        <span id="copyIcon">📋</span>
+        <span id="copyText">Copy to Clipboard</span>
+      </button>
+
+      <div class="copy-warning">
+        ⚠️ Only copy if you're in a secure location. Clear your clipboard after saving.
+      </div>
 
       <div class="checkbox-group">
         <input type="checkbox" id="seedBackedUp" class="checkbox">
@@ -525,6 +579,41 @@
       } catch (error) {
         alert('Error creating wallet: ' + error.message);
         showScreen('createWalletScreen');
+      }
+    };
+
+    window.copySeedPhrase = async () => {
+      try {
+        const seedPhrase = localStorage.getItem('autho_wallet_seed');
+        if (!seedPhrase) {
+          alert('No seed phrase found');
+          return;
+        }
+
+        const decodedSeed = atob(seedPhrase);
+        
+        // Copy to clipboard
+        await navigator.clipboard.writeText(decodedSeed);
+        
+        // Visual feedback
+        const btn = document.getElementById('copySeedBtn');
+        const icon = document.getElementById('copyIcon');
+        const text = document.getElementById('copyText');
+        
+        btn.classList.add('copied');
+        icon.textContent = '✅';
+        text.textContent = 'Copied!';
+        
+        // Reset after 3 seconds
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          icon.textContent = '📋';
+          text.textContent = 'Copy to Clipboard';
+        }, 3000);
+        
+      } catch (error) {
+        console.error('Failed to copy:', error);
+        alert('Failed to copy to clipboard. Please write down the words manually.');
       }
     };
 
