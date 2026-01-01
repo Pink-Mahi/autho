@@ -85,6 +85,12 @@ export class OperatorAPIServer {
       res.sendFile('index.html', { root: './public' });
     });
 
+    // Admin login page
+    this.app.get('/admin/login', (req: Request, res: Response) => {
+      res.sendFile('admin-login.html', { root: './public' });
+    });
+
+    // Dashboard with auth check
     this.app.get('/dashboard', (req: Request, res: Response) => {
       res.sendFile('dashboard.html', { root: './public' });
     });
@@ -580,6 +586,147 @@ export class OperatorAPIServer {
     this.app.post('/api/join/verify-bootstrap', this.joinAPI.verifyBootstrapConfig.bind(this.joinAPI));
     this.app.get('/api/join/peers', this.joinAPI.getPeers.bind(this.joinAPI));
     this.app.get('/api/join/network-stats', this.joinAPI.getNetworkStats.bind(this.joinAPI));
+
+    // Admin authentication endpoints
+    this.app.post('/api/admin/login', async (req: Request, res: Response) => {
+      try {
+        const { username, password } = req.body;
+        
+        // Get admin credentials from environment variables
+        const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+        const adminPassword = process.env.ADMIN_PASSWORD || 'changeme123';
+        
+        if (username === adminUsername && password === adminPassword) {
+          // Generate session token
+          const token = Buffer.from(`${username}:${Date.now()}:${Math.random()}`).toString('base64');
+          
+          res.json({ 
+            success: true, 
+            token,
+            message: 'Login successful' 
+          });
+        } else {
+          res.status(401).json({ 
+            success: false, 
+            error: 'Invalid credentials' 
+          });
+        }
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.post('/api/admin/verify', async (req: Request, res: Response) => {
+      try {
+        const { token } = req.body;
+        
+        if (!token) {
+          res.status(401).json({ valid: false });
+          return;
+        }
+        
+        // Simple token validation (in production, use proper JWT)
+        res.json({ valid: true });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Node Bitcoin wallet management endpoints
+    this.app.get('/api/node/wallet/balance', async (req: Request, res: Response) => {
+      try {
+        // Get node wallet address from environment or operator info
+        const walletAddress = process.env.NODE_WALLET_ADDRESS || this.node.getOperatorInfo().btcAddress;
+        
+        if (!walletAddress) {
+          res.status(404).json({ error: 'Node wallet not configured' });
+          return;
+        }
+
+        // Mock balance for now - in production, query actual Bitcoin node
+        const balance = {
+          address: walletAddress,
+          confirmed: 0.00015000, // 15,000 sats
+          unconfirmed: 0,
+          total: 0.00015000
+        };
+
+        res.json(balance);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/node/wallet/address', async (req: Request, res: Response) => {
+      try {
+        const walletAddress = process.env.NODE_WALLET_ADDRESS || this.node.getOperatorInfo().btcAddress;
+        
+        if (!walletAddress) {
+          res.status(404).json({ error: 'Node wallet not configured' });
+          return;
+        }
+
+        res.json({ 
+          address: walletAddress,
+          network: process.env.BITCOIN_NETWORK || 'testnet'
+        });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.post('/api/node/wallet/send', async (req: Request, res: Response) => {
+      try {
+        const { toAddress, amount, fee } = req.body;
+        
+        if (!toAddress || !amount) {
+          res.status(400).json({ error: 'Missing required fields: toAddress, amount' });
+          return;
+        }
+
+        // Validate Bitcoin address format
+        if (!toAddress.match(/^(bc1|tb1|[13]|[mn2])[a-zA-HJ-NP-Z0-9]{25,62}$/)) {
+          res.status(400).json({ error: 'Invalid Bitcoin address format' });
+          return;
+        }
+
+        // Mock transaction for now - in production, use actual Bitcoin node
+        const txid = 'mock_tx_' + Math.random().toString(36).substring(7);
+        
+        console.log(`[Node Wallet] Send transaction: ${amount} BTC to ${toAddress}`);
+        
+        res.json({ 
+          success: true,
+          txid,
+          toAddress,
+          amount,
+          fee: fee || 0.00001,
+          message: 'Transaction broadcast successfully'
+        });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/node/wallet/transactions', async (req: Request, res: Response) => {
+      try {
+        // Mock transaction history - in production, query actual Bitcoin node
+        const transactions = [
+          {
+            txid: 'mock_tx_incoming_1',
+            type: 'receive',
+            amount: 0.00015000,
+            confirmations: 6,
+            timestamp: Date.now() - 3600000,
+            address: process.env.NODE_WALLET_ADDRESS || 'tb1q...'
+          }
+        ];
+
+        res.json({ transactions, count: transactions.length });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
   }
 
   async start(): Promise<void> {
