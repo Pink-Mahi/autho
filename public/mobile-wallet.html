@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>My Wallet - Bitcoin Ownership Protocol</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #ffffff;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      padding: 15px 20px;
+      border-bottom: 2px solid #d4af37;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: #d4af37;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 5px;
+    }
+
+    .header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #d4af37;
+      flex: 1;
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .wallet-card {
+      background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+      border-radius: 20px;
+      padding: 25px;
+      margin-bottom: 20px;
+      color: #1a1a1a;
+      box-shadow: 0 8px 25px rgba(212, 175, 55, 0.3);
+    }
+
+    .wallet-card-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+      opacity: 0.7;
+    }
+
+    .wallet-card-value {
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      word-break: break-all;
+      margin-bottom: 15px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+      color: #1a1a1a;
+      border: none;
+      border-radius: 12px;
+      padding: 15px 25px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-bottom: 10px;
+      transition: all 0.3s ease;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn.secondary {
+      background: rgba(212, 175, 55, 0.2);
+      color: #d4af37;
+      border: 2px solid #d4af37;
+    }
+
+    .btn.danger {
+      background: rgba(255, 87, 87, 0.2);
+      color: #ff5757;
+      border: 2px solid #ff5757;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(212, 175, 55, 0.3);
+      border-radius: 10px;
+      padding: 15px;
+      color: #ffffff;
+      font-size: 16px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: #d4af37;
+    }
+
+    .textarea {
+      min-height: 120px;
+      font-family: 'Courier New', monospace;
+      resize: vertical;
+    }
+
+    .warning-box {
+      background: rgba(255, 87, 87, 0.1);
+      border: 2px solid #ff5757;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+
+    .warning-box-title {
+      font-weight: 600;
+      color: #ff5757;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .warning-box-text {
+      font-size: 13px;
+      color: #ccc;
+      line-height: 1.6;
+    }
+
+    .success-box {
+      background: rgba(76, 217, 100, 0.1);
+      border: 2px solid #4cd964;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+
+    .success-box-title {
+      font-weight: 600;
+      color: #4cd964;
+      margin-bottom: 8px;
+    }
+
+    .seed-words {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .seed-word {
+      background: rgba(212, 175, 55, 0.1);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      font-family: 'Courier New', monospace;
+    }
+
+    .seed-word-num {
+      font-size: 10px;
+      color: #666;
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .seed-word-text {
+      font-size: 14px;
+      color: #d4af37;
+      font-weight: 600;
+    }
+
+    .info-card {
+      background: rgba(212, 175, 55, 0.1);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .info-card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    }
+
+    .info-card-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-card-label {
+      font-size: 13px;
+      color: #999;
+    }
+
+    .info-card-value {
+      font-size: 14px;
+      color: #d4af37;
+      font-weight: 600;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .spinner {
+      border: 3px solid rgba(212, 175, 55, 0.2);
+      border-top: 3px solid #d4af37;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .checkbox {
+      margin-top: 3px;
+    }
+
+    .checkbox-label {
+      font-size: 13px;
+      color: #ccc;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <button class="back-btn" onclick="goBack()">←</button>
+    <h1>My Wallet</h1>
+  </div>
+
+  <div class="container">
+    <!-- No Wallet Screen -->
+    <div id="noWalletScreen" class="screen active">
+      <div class="info-card">
+        <h2 style="color: #d4af37; margin-bottom: 10px;">Self-Custody Bitcoin Wallet</h2>
+        <p style="color: #ccc; font-size: 14px; line-height: 1.6;">
+          Create or import a Bitcoin wallet to verify items, make offers, and complete purchases. 
+          Your private keys stay on your device - we never see them.
+        </p>
+      </div>
+
+      <button class="btn" onclick="showCreateWallet()">Create New Wallet</button>
+      <button class="btn secondary" onclick="showImportWallet()">Import Existing Wallet</button>
+    </div>
+
+    <!-- Create Wallet Screen -->
+    <div id="createWalletScreen" class="screen">
+      <div class="warning-box">
+        <div class="warning-box-title">⚠️ Important</div>
+        <div class="warning-box-text">
+          You will receive a 12-word seed phrase. Write it down and store it safely. 
+          This is the ONLY way to recover your wallet if you lose your device.
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">Create Passcode (6+ characters)</label>
+        <input type="password" id="createPasscode" class="input" placeholder="Enter passcode" minlength="6">
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">Confirm Passcode</label>
+        <input type="password" id="confirmPasscode" class="input" placeholder="Confirm passcode" minlength="6">
+      </div>
+
+      <button class="btn" onclick="createWallet()">Create Wallet</button>
+      <button class="btn secondary" onclick="showNoWallet()">Cancel</button>
+    </div>
+
+    <!-- Show Seed Screen -->
+    <div id="showSeedScreen" class="screen">
+      <div class="warning-box">
+        <div class="warning-box-title">🔐 Your Recovery Phrase</div>
+        <div class="warning-box-text">
+          Write down these 12 words in order. Keep them safe and private. 
+          Anyone with these words can access your Bitcoin.
+        </div>
+      </div>
+
+      <div id="seedWords" class="seed-words"></div>
+
+      <div class="checkbox-group">
+        <input type="checkbox" id="seedBackedUp" class="checkbox">
+        <label for="seedBackedUp" class="checkbox-label">
+          I have written down my seed phrase and stored it in a safe place
+        </label>
+      </div>
+
+      <button class="btn" onclick="completeSeedBackup()" id="continueBtn" disabled>Continue</button>
+    </div>
+
+    <!-- Import Wallet Screen -->
+    <div id="importWalletScreen" class="screen">
+      <div class="info-card">
+        <p style="color: #ccc; font-size: 14px; line-height: 1.6;">
+          Enter your 12-word seed phrase to restore your wallet.
+        </p>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">Seed Phrase (12 words)</label>
+        <textarea id="importSeed" class="input textarea" placeholder="word1 word2 word3 ..."></textarea>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">Create Passcode (6+ characters)</label>
+        <input type="password" id="importPasscode" class="input" placeholder="Enter passcode" minlength="6">
+      </div>
+
+      <button class="btn" onclick="importWallet()">Import Wallet</button>
+      <button class="btn secondary" onclick="showNoWallet()">Cancel</button>
+    </div>
+
+    <!-- Wallet Info Screen -->
+    <div id="walletInfoScreen" class="screen">
+      <div class="wallet-card">
+        <div class="wallet-card-title">Identity Address</div>
+        <div class="wallet-card-value" id="identityAddress">Loading...</div>
+        
+        <div class="wallet-card-title">Payment Address</div>
+        <div class="wallet-card-value" id="paymentAddress">Loading...</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-card-row">
+          <span class="info-card-label">Wallet Type</span>
+          <span class="info-card-value">Self-Custody</span>
+        </div>
+        <div class="info-card-row">
+          <span class="info-card-label">Network</span>
+          <span class="info-card-value">Bitcoin Mainnet</span>
+        </div>
+        <div class="info-card-row">
+          <span class="info-card-label">Created</span>
+          <span class="info-card-value" id="walletCreated">-</span>
+        </div>
+      </div>
+
+      <button class="btn secondary" onclick="showExportSeed()">Export Seed Phrase</button>
+      <button class="btn danger" onclick="confirmDeleteWallet()">Delete Wallet</button>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="screen">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div id="loadingText">Processing...</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import wallet module (will need to be bundled for production)
+    // For now, using inline implementation
+
+    let currentScreen = 'noWalletScreen';
+
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+      currentScreen = screenId;
+    }
+
+    window.showNoWallet = () => showScreen('noWalletScreen');
+    window.showCreateWallet = () => showScreen('createWalletScreen');
+    window.showImportWallet = () => showScreen('importWalletScreen');
+    window.showWalletInfo = () => showScreen('walletInfoScreen');
+
+    window.goBack = () => {
+      window.location.href = '/m';
+    };
+
+    // Check if wallet exists on load
+    window.addEventListener('load', () => {
+      const hasWallet = localStorage.getItem('autho_wallet_encrypted');
+      if (hasWallet) {
+        loadWalletInfo();
+        showScreen('walletInfoScreen');
+      }
+    });
+
+    function loadWalletInfo() {
+      const wallet = JSON.parse(localStorage.getItem('autho_wallet') || '{}');
+      if (wallet.address) {
+        document.getElementById('identityAddress').textContent = wallet.address;
+        document.getElementById('paymentAddress').textContent = wallet.paymentAddress || wallet.address;
+        
+        const encrypted = localStorage.getItem('autho_wallet_encrypted');
+        if (encrypted) {
+          try {
+            const data = JSON.parse(atob(encrypted.split('.')[1] || '{}'));
+            if (data.createdAt) {
+              document.getElementById('walletCreated').textContent = new Date(data.createdAt).toLocaleDateString();
+            }
+          } catch (e) {
+            console.log('Could not parse wallet metadata');
+          }
+        }
+      }
+    }
+
+    window.createWallet = async () => {
+      const passcode = document.getElementById('createPasscode').value;
+      const confirm = document.getElementById('confirmPasscode').value;
+
+      if (passcode.length < 6) {
+        alert('Passcode must be at least 6 characters');
+        return;
+      }
+
+      if (passcode !== confirm) {
+        alert('Passcodes do not match');
+        return;
+      }
+
+      showScreen('loadingScreen');
+      document.getElementById('loadingText').textContent = 'Creating wallet...';
+
+      try {
+        // Simulate wallet creation (replace with actual wallet.js implementation)
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Generate mock seed
+        const words = ['abandon', 'ability', 'able', 'about', 'above', 'absent', 'absorb', 'abstract', 'absurd', 'abuse', 'access', 'accident'];
+        
+        // Display seed
+        const seedContainer = document.getElementById('seedWords');
+        seedContainer.innerHTML = '';
+        words.forEach((word, i) => {
+          seedContainer.innerHTML += `
+            <div class="seed-word">
+              <span class="seed-word-num">${i + 1}</span>
+              <span class="seed-word-text">${word}</span>
+            </div>
+          `;
+        });
+
+        // Store mock wallet
+        const mockWallet = {
+          publicKey: 'mock_public_key_' + Date.now(),
+          address: 'bc1qmock' + Math.random().toString(36).substring(7),
+          paymentAddress: 'bc1qpay' + Math.random().toString(36).substring(7)
+        };
+        localStorage.setItem('autho_wallet', JSON.stringify(mockWallet));
+        localStorage.setItem('autho_wallet_encrypted', btoa(JSON.stringify({ createdAt: Date.now() })));
+
+        showScreen('showSeedScreen');
+      } catch (error) {
+        alert('Error creating wallet: ' + error.message);
+        showScreen('createWalletScreen');
+      }
+    };
+
+    window.completeSeedBackup = () => {
+      loadWalletInfo();
+      showScreen('walletInfoScreen');
+    };
+
+    document.getElementById('seedBackedUp')?.addEventListener('change', (e) => {
+      document.getElementById('continueBtn').disabled = !e.target.checked;
+    });
+
+    window.importWallet = async () => {
+      const seed = document.getElementById('importSeed').value.trim();
+      const passcode = document.getElementById('importPasscode').value;
+
+      if (!seed || seed.split(' ').length !== 12) {
+        alert('Please enter a valid 12-word seed phrase');
+        return;
+      }
+
+      if (passcode.length < 6) {
+        alert('Passcode must be at least 6 characters');
+        return;
+      }
+
+      showScreen('loadingScreen');
+      document.getElementById('loadingText').textContent = 'Importing wallet...';
+
+      try {
+        // Simulate wallet import
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Store mock wallet
+        const mockWallet = {
+          publicKey: 'imported_public_key_' + Date.now(),
+          address: 'bc1qimp' + Math.random().toString(36).substring(7),
+          paymentAddress: 'bc1qpay' + Math.random().toString(36).substring(7)
+        };
+        localStorage.setItem('autho_wallet', JSON.stringify(mockWallet));
+        localStorage.setItem('autho_wallet_encrypted', btoa(JSON.stringify({ createdAt: Date.now() })));
+
+        loadWalletInfo();
+        showScreen('walletInfoScreen');
+      } catch (error) {
+        alert('Error importing wallet: ' + error.message);
+        showScreen('importWalletScreen');
+      }
+    };
+
+    window.showExportSeed = () => {
+      const confirmed = confirm('⚠️ WARNING: Your seed phrase gives full access to your Bitcoin. Only export it in a secure, private location. Continue?');
+      if (confirmed) {
+        const seed = 'abandon ability able about above absent absorb abstract absurd abuse access accident';
+        alert('Your seed phrase:\n\n' + seed + '\n\nWrite this down and keep it safe!');
+      }
+    };
+
+    window.confirmDeleteWallet = () => {
+      const confirmed = confirm('⚠️ WARNING: This will permanently delete your wallet from this device. Make sure you have your seed phrase backed up. Continue?');
+      if (confirmed) {
+        const doubleConfirm = confirm('Are you absolutely sure? This cannot be undone without your seed phrase.');
+        if (doubleConfirm) {
+          localStorage.removeItem('autho_wallet');
+          localStorage.removeItem('autho_wallet_encrypted');
+          showScreen('noWalletScreen');
+        }
+      }
+    };
+  </script>
+</body>
+</html>
