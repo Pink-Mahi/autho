@@ -11,7 +11,7 @@
  * - Bitcoin anchoring continues
  */
 
-import { createHash } from 'crypto';
+// Type definitions only - no runtime imports needed
 
 /**
  * Node Role
@@ -60,6 +60,11 @@ export interface PeerInfo {
   lastSeen: number;
   latency?: number; // milliseconds
   
+  // Network diversity tracking
+  asn?: string; // Autonomous System Number
+  provider?: string; // Hosting provider
+  region?: string; // Geographic region
+  
   // Reputation
   score: number; // 0-100
   malformedMessages: number;
@@ -73,6 +78,7 @@ export interface PeerInfo {
  * Each event is immutable and hash-chained.
  */
 export interface ProtocolEvent {
+  eventId: string; // Unique event identifier
   eventHash: string; // H(canonicalEventBytes)
   prevEventHash: string; // Links to previous event (hash chain)
   eventType: string;
@@ -107,12 +113,17 @@ export interface EventSignature {
 export interface Checkpoint {
   checkpointId: string;
   checkpointRoot: string; // MerkleRoot or H(logHead || prevCheckpoint)
+  merkleRoot: string; // Merkle root of events
+  previousCheckpointHash: string; // Hash chain of checkpoints
   fromEventHash: string;
   toEventHash: string;
   eventCount: number;
+  timestamp: number;
   
   // Bitcoin anchoring
   bitcoinTxId?: string;
+  bitcoinBlockHeight?: number;
+  bitcoinBlockHash?: string;
   blockHeight?: number;
   confirmed: boolean;
   
@@ -132,6 +143,12 @@ export interface OperatorRegistryEntry {
   payoutAddress: string;
   
   status: 'active' | 'inactive' | 'candidate' | 'removed';
+  
+  // Network diversity tracking
+  asn?: string;
+  provider?: string;
+  region?: string;
+  lastSeen: number;
   
   // Admission
   admittedAt?: number;
@@ -201,36 +218,17 @@ export interface CommitteeSelection {
  */
 export interface NetworkHealthMetrics {
   // Quorum Availability Ratio
-  qar: {
-    current: number; // 0-1 (% of time ≥M operators reachable)
-    last30Days: number;
-    threshold: number; // e.g., 0.995
-    healthy: boolean;
-  };
-  
-  // Diversity Score
-  diversity: {
-    asnCount: number;
-    regionCount: number;
-    maxAsnConcentration: number; // 0-1 (% on single ASN)
-    threshold: number; // e.g., 0.3 (max 30% on one ASN)
-    healthy: boolean;
-  };
-  
-  // Finalization Performance
-  finalization: {
-    latencyP50: number; // milliseconds
-    latencyP95: number;
-    backlogSize: number;
-    thresholdLatency: number; // e.g., 5000ms
-    thresholdBacklog: number; // e.g., 100
-    healthy: boolean;
-  };
-  
-  // Overall
-  capacityAlert: boolean;
-  alertSince?: number;
-  
+  quorumAvailabilityRatio: number;
+  diversityScore: number;
+  activeOperators: number;
+  activeGateways: number;
+  averageLatency: number;
+  p50Latency: number;
+  p95Latency: number;
+  backlogSize: number;
+  lastCheckpointTime: number;
+  networkCapacityAlert: boolean;
+  alertReason: string | null;
   measuredAt: number;
 }
 
@@ -239,26 +237,11 @@ export interface NetworkHealthMetrics {
  */
 export interface OperatorEarnings {
   operatorId: string;
-  
-  // Lifetime
-  totalEarningsSats: number;
+  totalEarned: number;
   settlementsParticipated: number;
-  
-  // Time-based
-  dailyEarnings: { date: string; sats: number }[];
-  weeklyEarnings: { week: string; sats: number }[];
-  monthlyEarnings: { month: string; sats: number }[];
-  
-  // Per-settlement breakdown
-  settlements: {
-    offerId: string;
-    settlementTxId: string;
-    amountSats: number;
-    timestamp: number;
-    confirmed: boolean;
-  }[];
-  
-  lastUpdated: number;
+  lastSettlementTime: number;
+  pendingEarnings: number;
+  earningsByMonth: Map<string, number>;
 }
 
 /**
@@ -276,7 +259,12 @@ export type P2PMessageType =
   | 'GETPEERS'      // Request peer list
   | 'PEERS'         // Peer list response
   | 'CHALLENGE'     // Uptime challenge (for candidates)
-  | 'CHALLENGE_RESPONSE'; // Uptime challenge response
+  | 'CHALLENGE_RESPONSE' // Uptime challenge response
+  | 'HELLO'         // Handshake
+  | 'ADDR'          // Peer address announcement
+  | 'GETADDR'       // Request peer addresses
+  | 'EVENTSYNC'     // Event log sync
+  | 'CHECKPOINTSYNC'; // Checkpoint sync
 
 /**
  * P2P Message
@@ -284,9 +272,11 @@ export type P2PMessageType =
 export interface P2PMessage {
   type: P2PMessageType;
   from: string; // nodeId
+  senderId?: string; // Sender node ID
   to?: string; // Optional specific recipient
   timestamp: number;
   nonce: string;
+  data?: any; // Message data
   
   // Message-specific payload
   payload: any;

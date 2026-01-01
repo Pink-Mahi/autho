@@ -5,11 +5,7 @@ import {
   PeerInfo, 
   ProtocolEvent,
   EventSignature,
-  PeerAddressMessage,
-  EventSyncRequest,
-  EventSyncResponse,
-  CheckpointRequest,
-  CheckpointResponse
+  // Message payload types defined inline
 } from './node-types';
 
 /**
@@ -76,7 +72,7 @@ export class P2PMessageHandler extends EventEmitter {
     }
     
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(`ws://${address}:${port}`);
+      const ws = new (WebSocket as any)(`ws://${address}:${port}`);
       
       ws.on('open', () => {
         const peer = new PeerConnection(peerId, ws, address, port);
@@ -85,9 +81,10 @@ export class P2PMessageHandler extends EventEmitter {
         // Send HELLO
         this.sendMessage(peer, {
           type: 'HELLO',
+          from: this.nodeId,
           timestamp: Date.now(),
-          senderId: this.nodeId,
-          data: {
+          nonce: Math.random().toString(36).substring(7),
+          payload: {
             nodeId: this.nodeId,
             publicKey: this.publicKey,
             version: '1.0.0',
@@ -157,7 +154,7 @@ export class P2PMessageHandler extends EventEmitter {
       // Route to handler
       const handler = this.messageHandlers.get(message.type);
       if (handler) {
-        handler(peer, message.data);
+        handler(peer, message.payload);
       } else {
         console.warn(`[P2P] Unknown message type: ${message.type}`);
       }
@@ -191,8 +188,8 @@ export class P2PMessageHandler extends EventEmitter {
   /**
    * ADDR: Peer address announcement
    */
-  private handleAddrMessage(peer: PeerConnection, data: PeerAddressMessage): void {
-    console.log(`[P2P] Received ${data.addresses.length} peer addresses from ${peer.id}`);
+  private handleAddrMessage(peer: PeerConnection, data: any): void {
+    console.log(`[P2P] Received ${data.addresses?.length || 0} peer addresses from ${peer.id}`);
     this.emit('peers:discovered', data.addresses);
   }
 
@@ -210,9 +207,10 @@ export class P2PMessageHandler extends EventEmitter {
     
     this.sendMessage(peer, {
       type: 'ADDR',
+      from: this.nodeId,
       timestamp: Date.now(),
-      senderId: this.nodeId,
-      data: { addresses }
+      nonce: Math.random().toString(36).substring(7),
+      payload: { addresses }
     });
   }
 
@@ -235,7 +233,7 @@ export class P2PMessageHandler extends EventEmitter {
   /**
    * EVENTSYNC: Event log sync request/response
    */
-  private handleEventSyncMessage(peer: PeerConnection, data: EventSyncRequest | EventSyncResponse): void {
+  private handleEventSyncMessage(peer: PeerConnection, data: any): void {
     if ('fromEventId' in data) {
       // Sync request
       console.log(`[P2P] Peer ${peer.id} requested sync from ${data.fromEventId}`);
@@ -250,7 +248,7 @@ export class P2PMessageHandler extends EventEmitter {
   /**
    * CHECKPOINT: Checkpoint announcement
    */
-  private handleCheckpointMessage(peer: PeerConnection, data: CheckpointResponse): void {
+  private handleCheckpointMessage(peer: PeerConnection, data: any): void {
     console.log(`[P2P] Received checkpoint ${data.checkpoint.checkpointId} from ${peer.id}`);
     this.emit('checkpoint:received', data.checkpoint, data.signatures, peer.id);
   }
@@ -258,7 +256,7 @@ export class P2PMessageHandler extends EventEmitter {
   /**
    * GETCHECKPOINT: Request checkpoint
    */
-  private handleGetCheckpointMessage(peer: PeerConnection, data: CheckpointRequest): void {
+  private handleGetCheckpointMessage(peer: PeerConnection, data: any): void {
     console.log(`[P2P] Peer ${peer.id} requested checkpoint ${data.checkpointId}`);
     this.emit('checkpoint:requested', data.checkpointId, peer);
   }
@@ -276,9 +274,10 @@ export class P2PMessageHandler extends EventEmitter {
     // Send HELLO back if not already sent
     this.sendMessage(peer, {
       type: 'HELLO',
+      from: this.nodeId,
       timestamp: Date.now(),
-      senderId: this.nodeId,
-      data: {
+      nonce: Math.random().toString(36).substring(7),
+      payload: {
         nodeId: this.nodeId,
         publicKey: this.publicKey,
         version: '1.0.0',
@@ -295,9 +294,10 @@ export class P2PMessageHandler extends EventEmitter {
   private handlePingMessage(peer: PeerConnection, data: any): void {
     this.sendMessage(peer, {
       type: 'PONG',
+      from: this.nodeId,
       timestamp: Date.now(),
-      senderId: this.nodeId,
-      data: {}
+      nonce: Math.random().toString(36).substring(7),
+      payload: {}
     });
   }
 
@@ -316,9 +316,10 @@ export class P2PMessageHandler extends EventEmitter {
   requestPeerAddresses(): void {
     this.broadcast({
       type: 'GETADDR',
+      from: this.nodeId,
       timestamp: Date.now(),
-      senderId: this.nodeId,
-      data: {}
+      nonce: Math.random().toString(36).substring(7),
+      payload: {}
     });
   }
 
@@ -328,9 +329,10 @@ export class P2PMessageHandler extends EventEmitter {
   gossipEvent(event: ProtocolEvent, signature: EventSignature): void {
     this.broadcast({
       type: 'EVENT',
+      from: this.nodeId,
       timestamp: Date.now(),
-      senderId: this.nodeId,
-      data: { event, signature }
+      nonce: Math.random().toString(36).substring(7),
+      payload: { event, signature }
     });
   }
 
@@ -340,9 +342,10 @@ export class P2PMessageHandler extends EventEmitter {
   requestEventSync(peer: PeerConnection, fromEventId?: string, toEventId?: string): void {
     this.sendMessage(peer, {
       type: 'EVENTSYNC',
+      from: this.nodeId,
       timestamp: Date.now(),
-      senderId: this.nodeId,
-      data: {
+      nonce: Math.random().toString(36).substring(7),
+      payload: {
         fromEventId,
         toEventId,
         maxEvents: 1000
@@ -356,9 +359,10 @@ export class P2PMessageHandler extends EventEmitter {
   sendEventSyncResponse(peer: PeerConnection, events: ProtocolEvent[], hasMore: boolean): void {
     this.sendMessage(peer, {
       type: 'EVENTSYNC',
+      from: this.nodeId,
       timestamp: Date.now(),
-      senderId: this.nodeId,
-      data: {
+      nonce: Math.random().toString(36).substring(7),
+      payload: {
         events,
         hasMore
       }
@@ -371,9 +375,10 @@ export class P2PMessageHandler extends EventEmitter {
   requestCheckpoint(peer: PeerConnection, checkpointId?: string): void {
     this.sendMessage(peer, {
       type: 'GETCHECKPOINT',
+      from: this.nodeId,
       timestamp: Date.now(),
-      senderId: this.nodeId,
-      data: { checkpointId }
+      nonce: Math.random().toString(36).substring(7),
+      payload: { checkpointId }
     });
   }
 
@@ -385,9 +390,10 @@ export class P2PMessageHandler extends EventEmitter {
       peer.lastPingSent = Date.now();
       this.sendMessage(peer, {
         type: 'PING',
+        from: this.nodeId,
         timestamp: Date.now(),
-        senderId: this.nodeId,
-        data: {}
+        nonce: Math.random().toString(36).substring(7),
+        payload: {}
       });
     }
   }
