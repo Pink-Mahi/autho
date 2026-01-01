@@ -246,9 +246,29 @@ export class OperatorAPIServer {
 
         const itemId = `ITEM_${Date.now()}_${Math.random().toString(36).substring(7)}`;
         
-        // Create ITEM_REGISTERED event
+        // Create item record directly (simplified for demo - in production would go through full event flow)
+        const item = {
+          itemId,
+          serialNumber,
+          itemType,
+          description: description || '',
+          manufacturerId,
+          ownerPubKey: manufacturerId,
+          registeredAt: Date.now(),
+          state: 'ACTIVE',
+          verified: false
+        };
+
+        // Store item in memory (in production, this would be in a database)
+        if (!(this.node as any).items) {
+          (this.node as any).items = new Map();
+        }
+        (this.node as any).items.set(itemId, item);
+
+        // Also create event for audit trail
         const event = {
           eventType: 'ITEM_REGISTERED',
+          itemId,
           data: {
             itemId,
             serialNumber,
@@ -263,6 +283,9 @@ export class OperatorAPIServer {
         };
 
         const result = await this.node.proposeEvent(event as any);
+        
+        console.log(`[API] Item registered: ${itemId}`);
+        
         res.json({ 
           success: true, 
           itemId,
@@ -270,15 +293,17 @@ export class OperatorAPIServer {
           message: 'Item registered successfully'
         });
       } catch (error: any) {
+        console.error('[API] Error registering item:', error);
         res.status(500).json({ error: error.message });
       }
     });
 
     this.app.get('/api/registry/items', async (req: Request, res: Response) => {
       try {
-        // Mock implementation - in production, query from event log
-        const items = (this.node as any).getAllItems ? await (this.node as any).getAllItems() : [];
-        res.json({ items });
+        // Get items from memory storage
+        const itemsMap = (this.node as any).items || new Map();
+        const items = Array.from(itemsMap.values());
+        res.json({ items, count: items.length });
       } catch (error: any) {
         res.status(500).json({ error: error.message });
       }
@@ -286,7 +311,15 @@ export class OperatorAPIServer {
 
     this.app.get('/api/registry/item/:itemId', async (req: Request, res: Response) => {
       try {
-        const item = await this.node.getItem(req.params.itemId);
+        // Try memory storage first
+        const itemsMap = (this.node as any).items || new Map();
+        let item = itemsMap.get(req.params.itemId);
+        
+        // Fallback to node's getItem method
+        if (!item) {
+          item = await this.node.getItem(req.params.itemId);
+        }
+        
         if (!item) {
           res.status(404).json({ error: 'Item not found' });
           return;
