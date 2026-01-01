@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manufacturer Dashboard - Bitcoin Ownership Protocol</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Montserrat:wght@300;400;500;600&display=swap');
+        
         * {
             margin: 0;
             padding: 0;
@@ -12,10 +14,11 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
             min-height: 100vh;
             padding: 20px;
+            color: #d4af37;
         }
 
         .dashboard-container {
@@ -24,24 +27,45 @@
         }
 
         .header {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+            border: 2px solid #d4af37;
+            padding: 40px;
+            border-radius: 20px;
             margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 20px 60px rgba(212, 175, 55, 0.3), inset 0 1px 0 rgba(212, 175, 55, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #d4af37, transparent);
         }
 
         .header h1 {
-            color: #667eea;
+            font-family: 'Playfair Display', serif;
+            color: #d4af37;
+            font-size: 2.5rem;
             margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 10px rgba(212, 175, 55, 0.5);
         }
 
         .header p {
-            color: #666;
+            color: #d4af37;
+            opacity: 0.8;
             font-size: 1.1rem;
+            font-weight: 300;
+            letter-spacing: 0.5px;
         }
 
         .stats-grid {
@@ -52,11 +76,19 @@
         }
 
         .stat-card {
-            background: white;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+            border: 1px solid #d4af37;
             padding: 25px;
             border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.2);
             text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(212, 175, 55, 0.4);
+            border-color: #f4d03f;
         }
 
         .stat-icon {
@@ -67,17 +99,21 @@
         .stat-value {
             font-size: 2rem;
             font-weight: bold;
-            color: #667eea;
+            color: #d4af37;
             margin-bottom: 5px;
+            text-shadow: 0 2px 10px rgba(212, 175, 55, 0.3);
         }
 
         .stat-label {
-            color: #666;
+            color: #d4af37;
+            opacity: 0.7;
             font-size: 0.9rem;
+            letter-spacing: 0.5px;
         }
 
         .action-section {
-            background: white;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+            border: 1px solid #d4af37;
             padding: 30px;
             border-radius: 15px;
             margin-bottom: 30px;
@@ -85,20 +121,25 @@
         }
 
         .action-section h2 {
-            color: #333;
+            font-family: 'Playfair Display', serif;
+            color: #d4af37;
             margin-bottom: 20px;
             display: flex;
             align-items: center;
             gap: 10px;
+            font-size: 1.8rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
 
         .btn {
-            background: #667eea;
-            color: white;
+            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+            color: #0a0a0a;
             border: none;
             padding: 15px 30px;
             border-radius: 10px;
             font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
             display: inline-flex;
@@ -106,20 +147,24 @@
             gap: 10px;
             margin-right: 10px;
             margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.3);
         }
 
         .btn:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.5);
         }
 
         .btn-secondary {
-            background: #6c757d;
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+            color: #d4af37;
+            border: 1px solid #d4af37;
         }
 
         .btn-secondary:hover {
-            background: #5a6268;
+            background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3);
         }
 
         .form-group {
@@ -129,8 +174,9 @@
         .form-group label {
             display: block;
             margin-bottom: 8px;
-            color: #333;
+            color: #d4af37;
             font-weight: 500;
+            letter-spacing: 0.5px;
         }
 
         .form-group input,
@@ -138,17 +184,21 @@
         .form-group select {
             width: 100%;
             padding: 12px;
-            border: 2px solid #e0e0e0;
+            background: rgba(26, 26, 26, 0.5);
+            border: 2px solid rgba(212, 175, 55, 0.3);
             border-radius: 8px;
             font-size: 1rem;
-            transition: border-color 0.3s;
+            color: #d4af37;
+            transition: all 0.3s;
         }
 
         .form-group input:focus,
         .form-group textarea:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #d4af37;
+            background: rgba(26, 26, 26, 0.8);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
         }
 
         .form-group textarea {
@@ -161,31 +211,43 @@
         }
 
         .item-card {
-            background: #f8f9fa;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+            border: 1px solid rgba(212, 175, 55, 0.3);
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.3s;
+        }
+
+        .item-card:hover {
+            border-color: #d4af37;
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.2);
+            transform: translateX(5px);
         }
 
         .item-info h3 {
-            color: #333;
+            color: #d4af37;
             margin-bottom: 5px;
+            font-weight: 600;
         }
 
         .item-info p {
-            color: #666;
+            color: #d4af37;
+            opacity: 0.7;
             font-size: 0.9rem;
         }
 
         .item-id {
-            font-family: monospace;
-            background: #e9ecef;
+            font-family: 'Courier New', monospace;
+            background: rgba(212, 175, 55, 0.2);
+            color: #d4af37;
             padding: 5px 10px;
             border-radius: 5px;
             font-size: 0.85rem;
+            border: 1px solid rgba(212, 175, 55, 0.3);
         }
 
         .modal {
@@ -195,10 +257,11 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.9);
             z-index: 1000;
             align-items: center;
             justify-content: center;
+            backdrop-filter: blur(10px);
         }
 
         .modal.active {
@@ -206,13 +269,15 @@
         }
 
         .modal-content {
-            background: white;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+            border: 2px solid #d4af37;
             padding: 40px;
             border-radius: 15px;
             max-width: 600px;
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(212, 175, 55, 0.4);
         }
 
         .modal-header {
@@ -223,7 +288,9 @@
         }
 
         .modal-header h2 {
-            color: #333;
+            font-family: 'Playfair Display', serif;
+            color: #d4af37;
+            font-weight: 600;
         }
 
         .close-btn {
