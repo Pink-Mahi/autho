@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Wallet Login - Bitcoin Ownership Protocol</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      padding: 15px 20px;
+      border-bottom: 2px solid #d4af37;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: #d4af37;
+    }
+
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 20px;
+      max-width: 500px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo-icon {
+      font-size: 64px;
+      margin-bottom: 15px;
+    }
+
+    .logo-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      color: #d4af37;
+      font-weight: 600;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 20px;
+      padding: 30px;
+      backdrop-filter: blur(10px);
+    }
+
+    .card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      color: #d4af37;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .card-subtitle {
+      color: #999;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .wallet-preview {
+      background: rgba(212, 175, 55, 0.1);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+
+    .wallet-preview-label {
+      font-size: 12px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .wallet-preview-address {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #d4af37;
+      word-break: break-all;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      color: #d4af37;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 12px;
+      color: #ffffff;
+      font-size: 16px;
+      font-family: 'Courier New', monospace;
+      text-align: center;
+      letter-spacing: 3px;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #d4af37;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .pin-input {
+      font-size: 24px;
+      letter-spacing: 8px;
+    }
+
+    .btn {
+      width: 100%;
+      background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+      color: #1a1a1a;
+      border: none;
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-bottom: 12px;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: #d4af37;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+    }
+
+    .error-message {
+      background: rgba(255, 59, 48, 0.1);
+      border: 1px solid rgba(255, 59, 48, 0.3);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 20px;
+      color: #ff3b30;
+      font-size: 14px;
+      text-align: center;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .help-text {
+      text-align: center;
+      color: #999;
+      font-size: 13px;
+      margin-top: 20px;
+    }
+
+    .help-link {
+      color: #d4af37;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .help-link:hover {
+      text-decoration: underline;
+    }
+
+    .divider {
+      text-align: center;
+      margin: 25px 0;
+      color: #666;
+      font-size: 14px;
+      position: relative;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background: rgba(212, 175, 55, 0.2);
+    }
+
+    .divider::before {
+      left: 0;
+    }
+
+    .divider::after {
+      right: 0;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .loading-spinner {
+      border: 3px solid rgba(212, 175, 55, 0.2);
+      border-top: 3px solid #d4af37;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔐 Wallet Login</h1>
+  </div>
+
+  <div class="container">
+    <!-- PIN Login Screen -->
+    <div id="pinLoginScreen" class="screen active">
+      <div class="logo">
+        <div class="logo-icon">💎</div>
+        <div class="logo-text">Welcome Back</div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Unlock Your Wallet</h2>
+        <p class="card-subtitle">Enter your 6-digit PIN</p>
+
+        <div class="wallet-preview">
+          <div class="wallet-preview-label">Wallet Address</div>
+          <div class="wallet-preview-address" id="walletAddressPreview">Loading...</div>
+        </div>
+
+        <div id="errorMessage" class="error-message"></div>
+
+        <div class="form-group">
+          <input 
+            type="password" 
+            id="pinInput" 
+            class="form-input pin-input" 
+            placeholder="••••••" 
+            maxlength="6"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            autocomplete="off"
+          >
+        </div>
+
+        <button class="btn" onclick="unlockWithPin()">
+          🔓 Unlock Wallet
+        </button>
+
+        <div class="divider">OR</div>
+
+        <button class="btn btn-secondary" onclick="showSeedRecovery()">
+          🔑 Recover with Seed Phrase
+        </button>
+
+        <div class="help-text">
+          <a href="#" class="help-link" onclick="forgotPin(); return false;">Forgot PIN?</a>
+          <br><br>
+          <a href="/m/wallet" class="help-link">Create New Wallet</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seed Recovery Screen -->
+    <div id="seedRecoveryScreen" class="screen">
+      <div class="card">
+        <h2 class="card-title">Recover Wallet</h2>
+        <p class="card-subtitle">Enter your 12-word seed phrase</p>
+
+        <div id="seedErrorMessage" class="error-message"></div>
+
+        <div class="form-group">
+          <label class="form-label">Seed Phrase</label>
+          <textarea 
+            id="seedPhraseInput" 
+            class="form-input" 
+            rows="4" 
+            placeholder="word1 word2 word3 ..."
+            style="letter-spacing: normal; text-align: left; font-size: 14px;"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Set New PIN (6 digits)</label>
+          <input 
+            type="password" 
+            id="newPinInput" 
+            class="form-input pin-input" 
+            placeholder="••••••" 
+            maxlength="6"
+            inputmode="numeric"
+            pattern="[0-9]*"
+          >
+        </div>
+
+        <button class="btn" onclick="recoverWallet()">
+          ♻️ Recover Wallet
+        </button>
+
+        <button class="btn btn-secondary" onclick="showPinLogin()">
+          ← Back to PIN Login
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let walletData = null;
+
+    // Load wallet preview on page load
+    window.addEventListener('load', () => {
+      loadWalletPreview();
+    });
+
+    function loadWalletPreview() {
+      try {
+        const wallet = JSON.parse(localStorage.getItem('autho_wallet') || '{}');
+        if (wallet.address) {
+          const address = wallet.address;
+          const preview = address.substring(0, 8) + '...' + address.substring(address.length - 8);
+          document.getElementById('walletAddressPreview').textContent = preview;
+          walletData = wallet;
+        } else {
+          // No wallet found, redirect to wallet creation
+          window.location.href = '/m/wallet';
+        }
+      } catch (error) {
+        console.error('Error loading wallet:', error);
+        window.location.href = '/m/wallet';
+      }
+    }
+
+    function showError(message, elementId = 'errorMessage') {
+      const errorEl = document.getElementById(elementId);
+      errorEl.textContent = message;
+      errorEl.classList.add('show');
+      setTimeout(() => {
+        errorEl.classList.remove('show');
+      }, 5000);
+    }
+
+    function unlockWithPin() {
+      const pin = document.getElementById('pinInput').value.trim();
+      
+      if (!pin) {
+        showError('Please enter your PIN');
+        return;
+      }
+
+      if (pin.length !== 6 || !/^\d+$/.test(pin)) {
+        showError('PIN must be 6 digits');
+        return;
+      }
+
+      try {
+        // Get stored PIN hash
+        const storedPinHash = localStorage.getItem('autho_wallet_pin');
+        
+        if (!storedPinHash) {
+          // No PIN set, create one
+          const confirmPin = prompt('No PIN found. Set a new 6-digit PIN:');
+          if (confirmPin && confirmPin.length === 6 && /^\d+$/.test(confirmPin)) {
+            const pinHash = btoa(confirmPin); // Simple encoding for demo
+            localStorage.setItem('autho_wallet_pin', pinHash);
+            unlockSuccess();
+            return;
+          } else {
+            showError('Invalid PIN format');
+            return;
+          }
+        }
+
+        // Verify PIN
+        const enteredPinHash = btoa(pin);
+        if (enteredPinHash === storedPinHash) {
+          unlockSuccess();
+        } else {
+          showError('Incorrect PIN. Please try again.');
+          document.getElementById('pinInput').value = '';
+        }
+      } catch (error) {
+        console.error('Error unlocking wallet:', error);
+        showError('Error unlocking wallet');
+      }
+    }
+
+    function unlockSuccess() {
+      // Set session flag
+      sessionStorage.setItem('autho_wallet_unlocked', 'true');
+      sessionStorage.setItem('autho_wallet_unlock_time', Date.now().toString());
+      
+      // Redirect to main app
+      const returnUrl = new URLSearchParams(window.location.search).get('return') || '/m';
+      window.location.href = returnUrl;
+    }
+
+    function showSeedRecovery() {
+      document.getElementById('pinLoginScreen').classList.remove('active');
+      document.getElementById('seedRecoveryScreen').classList.add('active');
+    }
+
+    function showPinLogin() {
+      document.getElementById('seedRecoveryScreen').classList.remove('active');
+      document.getElementById('pinLoginScreen').classList.add('active');
+    }
+
+    function recoverWallet() {
+      const seedPhrase = document.getElementById('seedPhraseInput').value.trim();
+      const newPin = document.getElementById('newPinInput').value.trim();
+
+      if (!seedPhrase) {
+        showError('Please enter your seed phrase', 'seedErrorMessage');
+        return;
+      }
+
+      const words = seedPhrase.toLowerCase().split(/\s+/);
+      if (words.length !== 12) {
+        showError('Seed phrase must be exactly 12 words', 'seedErrorMessage');
+        return;
+      }
+
+      if (!newPin || newPin.length !== 6 || !/^\d+$/.test(newPin)) {
+        showError('PIN must be 6 digits', 'seedErrorMessage');
+        return;
+      }
+
+      try {
+        // In production, derive wallet from seed phrase
+        // For demo, we'll verify the stored seed matches
+        const storedSeed = localStorage.getItem('autho_wallet_seed');
+        
+        if (storedSeed && atob(storedSeed) === seedPhrase) {
+          // Valid seed, set new PIN
+          const pinHash = btoa(newPin);
+          localStorage.setItem('autho_wallet_pin', pinHash);
+          
+          alert('✅ Wallet recovered successfully! Your new PIN has been set.');
+          showPinLogin();
+        } else {
+          showError('Invalid seed phrase. Please check and try again.', 'seedErrorMessage');
+        }
+      } catch (error) {
+        console.error('Error recovering wallet:', error);
+        showError('Error recovering wallet', 'seedErrorMessage');
+      }
+    }
+
+    function forgotPin() {
+      alert('To reset your PIN, you\'ll need to recover your wallet using your 12-word seed phrase.\n\nClick "Recover with Seed Phrase" below.');
+    }
+
+    // Handle Enter key on PIN input
+    document.addEventListener('DOMContentLoaded', () => {
+      const pinInput = document.getElementById('pinInput');
+      if (pinInput) {
+        pinInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            unlockWithPin();
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

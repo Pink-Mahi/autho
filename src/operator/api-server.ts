@@ -135,6 +135,10 @@ export class OperatorAPIServer {
       res.sendFile('mobile-history.html', { root: './public' });
     });
 
+    this.app.get('/m/login', (req: Request, res: Response) => {
+      res.sendFile('mobile-login.html', { root: './public' });
+    });
+
     this.app.get('/health', (req: Request, res: Response) => {
       res.json({ status: 'healthy', operator: this.node.getOperatorInfo() });
     });

@@ -492,6 +492,22 @@
         
         // Generate mock seed
         const words = ['abandon', 'ability', 'able', 'about', 'above', 'absent', 'absorb', 'abstract', 'absurd', 'abuse', 'access', 'accident'];
+        const seedPhrase = words.join(' ');
+        
+        // Store wallet
+        const mockWallet = {
+          seedPhrase,
+          publicKey: 'mock_pubkey_' + Math.random().toString(36).substring(7),
+          address: 'bc1qmock' + Math.random().toString(36).substring(7),
+          paymentAddress: 'bc1qpay' + Math.random().toString(36).substring(7)
+        };
+        localStorage.setItem('autho_wallet', JSON.stringify(mockWallet));
+        localStorage.setItem('autho_wallet_encrypted', btoa(JSON.stringify({ createdAt: Date.now() })));
+        localStorage.setItem('autho_wallet_seed', btoa(seedPhrase));
+        
+        // Set PIN
+        const pinHash = btoa(passcode);
+        localStorage.setItem('autho_wallet_pin', pinHash);
         
         // Display seed
         const seedContainer = document.getElementById('seedWords');
@@ -504,15 +520,6 @@
             </div>
           `;
         });
-
-        // Store mock wallet
-        const mockWallet = {
-          publicKey: 'mock_public_key_' + Date.now(),
-          address: 'bc1qmock' + Math.random().toString(36).substring(7),
-          paymentAddress: 'bc1qpay' + Math.random().toString(36).substring(7)
-        };
-        localStorage.setItem('autho_wallet', JSON.stringify(mockWallet));
-        localStorage.setItem('autho_wallet_encrypted', btoa(JSON.stringify({ createdAt: Date.now() })));
 
         showScreen('showSeedScreen');
       } catch (error) {
@@ -553,12 +560,18 @@
 
         // Store mock wallet
         const mockWallet = {
+          seedPhrase: seed,
           publicKey: 'imported_public_key_' + Date.now(),
           address: 'bc1qimp' + Math.random().toString(36).substring(7),
           paymentAddress: 'bc1qpay' + Math.random().toString(36).substring(7)
         };
         localStorage.setItem('autho_wallet', JSON.stringify(mockWallet));
         localStorage.setItem('autho_wallet_encrypted', btoa(JSON.stringify({ createdAt: Date.now() })));
+        localStorage.setItem('autho_wallet_seed', btoa(seed));
+        
+        // Set PIN
+        const pinHash = btoa(passcode);
+        localStorage.setItem('autho_wallet_pin', pinHash);
 
         loadWalletInfo();
         showScreen('walletInfoScreen');
