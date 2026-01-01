@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Verify Item - Bitcoin Ownership Protocol</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #ffffff;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      padding: 15px 20px;
+      border-bottom: 2px solid #d4af37;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: #d4af37;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 5px;
+    }
+
+    .header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #d4af37;
+      flex: 1;
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .scan-container {
+      background: rgba(212, 175, 55, 0.1);
+      border: 2px dashed #d4af37;
+      border-radius: 15px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    #reader {
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 15px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+      color: #1a1a1a;
+      border: none;
+      border-radius: 12px;
+      padding: 15px 25px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-bottom: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn.secondary {
+      background: rgba(212, 175, 55, 0.2);
+      color: #d4af37;
+      border: 2px solid #d4af37;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(212, 175, 55, 0.3);
+      border-radius: 10px;
+      padding: 15px;
+      color: #ffffff;
+      font-size: 16px;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: #d4af37;
+    }
+
+    .item-card {
+      background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+      border: 2px solid #d4af37;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 15px;
+    }
+
+    .item-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      color: #d4af37;
+      margin-bottom: 5px;
+    }
+
+    .item-serial {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #999;
+    }
+
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-badge.active {
+      background: rgba(76, 217, 100, 0.2);
+      color: #4cd964;
+      border: 1px solid #4cd964;
+    }
+
+    .status-badge.locked {
+      background: rgba(255, 149, 0, 0.2);
+      color: #ff9500;
+      border: 1px solid #ff9500;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      font-size: 13px;
+      color: #999;
+    }
+
+    .info-value {
+      font-size: 14px;
+      color: #d4af37;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .proof-section {
+      background: rgba(76, 217, 100, 0.1);
+      border: 1px solid #4cd964;
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 15px;
+    }
+
+    .proof-title {
+      font-size: 12px;
+      color: #4cd964;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .proof-item {
+      font-size: 12px;
+      color: #ccc;
+      padding: 8px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .spinner {
+      border: 3px solid rgba(212, 175, 55, 0.2);
+      border-top: 3px solid #d4af37;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .error-box {
+      background: rgba(255, 87, 87, 0.1);
+      border: 2px solid #ff5757;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .error-title {
+      font-weight: 600;
+      color: #ff5757;
+      margin-bottom: 8px;
+    }
+
+    .error-text {
+      font-size: 13px;
+      color: #ccc;
+    }
+
+    .price-display {
+      background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+      border-radius: 15px;
+      padding: 20px;
+      text-align: center;
+      margin: 20px 0;
+      color: #1a1a1a;
+    }
+
+    .price-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+      opacity: 0.7;
+    }
+
+    .price-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 32px;
+      font-weight: 700;
+    }
+
+    .price-sats {
+      font-size: 14px;
+      margin-top: 5px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <button class="back-btn" onclick="goBack()">←</button>
+    <h1>Verify Item</h1>
+  </div>
+
+  <div class="container">
+    <!-- Scan/Enter Screen -->
+    <div id="scanScreen" class="screen active">
+      <div class="scan-container">
+        <div id="reader"></div>
+        <p style="color: #999; font-size: 13px; margin-top: 10px;">
+          Position the QR code within the frame
+        </p>
+      </div>
+
+      <div style="text-align: center; color: #999; margin: 20px 0;">
+        <p>— OR —</p>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">Enter Item ID or Serial Number</label>
+        <input type="text" id="itemIdInput" class="input" placeholder="e.g., ITEM-12345 or SN-ABC123">
+      </div>
+
+      <button class="btn" onclick="verifyManual()">Verify Item</button>
+      <button class="btn secondary" onclick="toggleScanner()">
+        <span id="scannerToggleText">Stop Scanner</span>
+      </button>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="screen">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div id="loadingText">Verifying item...</div>
+        <p style="color: #999; font-size: 13px; margin-top: 10px;">
+          Checking with multiple operators
+        </p>
+      </div>
+    </div>
+
+    <!-- Item Details Screen -->
+    <div id="itemDetailsScreen" class="screen">
+      <div class="item-card">
+        <div class="item-header">
+          <div>
+            <div class="item-title" id="itemName">Loading...</div>
+            <div class="item-serial" id="itemSerial">SN: ...</div>
+          </div>
+          <div class="status-badge active" id="itemStatus">ACTIVE</div>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Manufacturer</span>
+          <span class="info-value" id="manufacturer">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Authenticator</span>
+          <span class="info-value" id="authenticator">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Current Owner</span>
+          <span class="info-value" id="currentOwner">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Registered</span>
+          <span class="info-value" id="registeredDate">-</span>
+        </div>
+
+        <div class="proof-section">
+          <div class="proof-title">✓ Verified Authentic</div>
+          <div class="proof-item">
+            <span>Operator Signatures</span>
+            <span id="signatureCount">5/5</span>
+          </div>
+          <div class="proof-item">
+            <span>Last Checkpoint</span>
+            <span id="lastCheckpoint">2 hours ago</span>
+          </div>
+          <div class="proof-item">
+            <span>Bitcoin Anchor</span>
+            <span id="bitcoinAnchor">Block 820,000</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="price-display" id="priceDisplay" style="display: none;">
+        <div class="price-label">Listed Price</div>
+        <div class="price-value" id="priceUSD">$0</div>
+        <div class="price-sats" id="priceSats">0 sats</div>
+      </div>
+
+      <button class="btn" onclick="makeOffer()" id="makeOfferBtn">Make Offer</button>
+      <button class="btn secondary" onclick="viewHistory()">View History</button>
+      <button class="btn secondary" onclick="scanAnother()">Scan Another Item</button>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="errorScreen" class="screen">
+      <div class="error-box">
+        <div class="error-title">⚠️ Verification Failed</div>
+        <div class="error-text" id="errorMessage">Item not found or could not be verified</div>
+      </div>
+
+      <button class="btn secondary" onclick="scanAnother()">Try Another Item</button>
+      <button class="btn secondary" onclick="goBack()">Back to Home</button>
+    </div>
+  </div>
+
+  <script>
+    let html5QrCode = null;
+    let scannerActive = false;
+    let currentItemId = null;
+
+    window.goBack = () => {
+      window.location.href = '/m';
+    };
+
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    window.scanAnother = () => {
+      currentItemId = null;
+      document.getElementById('itemIdInput').value = '';
+      showScreen('scanScreen');
+      if (!scannerActive) {
+        startScanner();
+      }
+    };
+
+    // Initialize QR scanner
+    function startScanner() {
+      if (scannerActive) return;
+
+      html5QrCode = new Html5Qrcode("reader");
+      
+      html5QrCode.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        onScanSuccess,
+        onScanError
+      ).then(() => {
+        scannerActive = true;
+        document.getElementById('scannerToggleText').textContent = 'Stop Scanner';
+      }).catch(err => {
+        console.error('Scanner error:', err);
+        scannerActive = false;
+      });
+    }
+
+    function stopScanner() {
+      if (!scannerActive || !html5QrCode) return;
+
+      html5QrCode.stop().then(() => {
+        scannerActive = false;
+        document.getElementById('scannerToggleText').textContent = 'Start Scanner';
+      }).catch(err => {
+        console.error('Error stopping scanner:', err);
+      });
+    }
+
+    window.toggleScanner = () => {
+      if (scannerActive) {
+        stopScanner();
+      } else {
+        startScanner();
+      }
+    };
+
+    function onScanSuccess(decodedText) {
+      console.log('QR Code scanned:', decodedText);
+      stopScanner();
+      verifyItem(decodedText);
+    }
+
+    function onScanError(error) {
+      // Ignore scan errors (too noisy)
+    }
+
+    window.verifyManual = () => {
+      const itemId = document.getElementById('itemIdInput').value.trim();
+      if (!itemId) {
+        alert('Please enter an item ID or serial number');
+        return;
+      }
+      stopScanner();
+      verifyItem(itemId);
+    };
+
+    async function verifyItem(itemId) {
+      currentItemId = itemId;
+      showScreen('loadingScreen');
+
+      try {
+        // Query multiple operators for item proof
+        const response = await fetch(`/api/registry/item/${encodeURIComponent(itemId)}`);
+        
+        if (!response.ok) {
+          throw new Error('Item not found');
+        }
+
+        const data = await response.json();
+        displayItemDetails(data);
+        showScreen('itemDetailsScreen');
+      } catch (error) {
+        console.error('Verification error:', error);
+        document.getElementById('errorMessage').textContent = error.message;
+        showScreen('errorScreen');
+      }
+    }
+
+    function displayItemDetails(item) {
+      document.getElementById('itemName').textContent = item.itemType || 'Unknown Item';
+      document.getElementById('itemSerial').textContent = `SN: ${item.serialNumber || item.itemId}`;
+      document.getElementById('itemStatus').textContent = item.state || 'ACTIVE';
+      document.getElementById('manufacturer').textContent = item.manufacturerId || 'Unknown';
+      document.getElementById('authenticator').textContent = item.authenticatorId || 'Verified';
+      
+      // Format owner address
+      const owner = item.ownerPubKey || 'Unknown';
+      document.getElementById('currentOwner').textContent = 
+        owner.length > 20 ? owner.substring(0, 10) + '...' + owner.substring(owner.length - 10) : owner;
+      
+      document.getElementById('registeredDate').textContent = 
+        item.registeredAt ? new Date(item.registeredAt).toLocaleDateString() : '-';
+
+      // Mock proof data (replace with actual verification)
+      document.getElementById('signatureCount').textContent = '5/5';
+      document.getElementById('lastCheckpoint').textContent = '2 hours ago';
+      document.getElementById('bitcoinAnchor').textContent = 'Block 820,000';
+
+      // Check if item has a price/offer
+      if (item.listedPrice) {
+        document.getElementById('priceDisplay').style.display = 'block';
+        document.getElementById('priceUSD').textContent = `$${item.listedPrice.toLocaleString()}`;
+        document.getElementById('priceSats').textContent = `${Math.floor(item.listedPrice * 2500)} sats`;
+      }
+
+      // Check if user can make offer (not owner)
+      const wallet = JSON.parse(localStorage.getItem('autho_wallet') || '{}');
+      if (wallet.publicKey === item.ownerPubKey) {
+        document.getElementById('makeOfferBtn').textContent = 'You Own This Item';
+        document.getElementById('makeOfferBtn').disabled = true;
+      }
+    }
+
+    window.makeOffer = () => {
+      // Check if wallet exists
+      const wallet = localStorage.getItem('autho_wallet');
+      if (!wallet) {
+        const createWallet = confirm('You need a Bitcoin wallet to make offers. Create one now?');
+        if (createWallet) {
+          window.location.href = '/m/wallet';
+        }
+        return;
+      }
+
+      // Navigate to offer page
+      window.location.href = `/m/offer?itemId=${encodeURIComponent(currentItemId)}`;
+    };
+
+    window.viewHistory = () => {
+      window.location.href = `/m/history?itemId=${encodeURIComponent(currentItemId)}`;
+    };
+
+    // Start scanner on load
+    window.addEventListener('load', () => {
+      startScanner();
+    });
+
+    // Stop scanner when leaving page
+    window.addEventListener('beforeunload', () => {
+      stopScanner();
+    });
+  </script>
+</body>
+</html>

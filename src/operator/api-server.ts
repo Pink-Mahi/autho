@@ -106,6 +106,35 @@ export class OperatorAPIServer {
       res.sendFile('join.html', { root: './public' });
     });
 
+    // Mobile Reseller Gateway Routes
+    this.app.get('/m', (req: Request, res: Response) => {
+      res.sendFile('mobile-entry.html', { root: './public' });
+    });
+
+    this.app.get('/m/verify', (req: Request, res: Response) => {
+      res.sendFile('mobile-verify.html', { root: './public' });
+    });
+
+    this.app.get('/m/wallet', (req: Request, res: Response) => {
+      res.sendFile('mobile-wallet.html', { root: './public' });
+    });
+
+    this.app.get('/m/offer', (req: Request, res: Response) => {
+      res.sendFile('mobile-offer.html', { root: './public' });
+    });
+
+    this.app.get('/m/items', (req: Request, res: Response) => {
+      res.sendFile('mobile-items.html', { root: './public' });
+    });
+
+    this.app.get('/m/offers', (req: Request, res: Response) => {
+      res.sendFile('mobile-offers.html', { root: './public' });
+    });
+
+    this.app.get('/m/history', (req: Request, res: Response) => {
+      res.sendFile('mobile-history.html', { root: './public' });
+    });
+
     this.app.get('/health', (req: Request, res: Response) => {
       res.json({ status: 'healthy', operator: this.node.getOperatorInfo() });
     });
