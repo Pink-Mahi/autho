@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>My Items - Bitcoin Ownership Protocol</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #ffffff;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      padding: 15px 20px;
+      border-bottom: 2px solid #d4af37;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: #d4af37;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 5px;
+    }
+
+    .header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #d4af37;
+      flex: 1;
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .wallet-status {
+      background: rgba(212, 175, 55, 0.1);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+
+    .wallet-label {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 5px;
+    }
+
+    .wallet-address {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #d4af37;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #d4af37;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      color: #d4af37;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .item-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 15px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .item-card:active {
+      transform: scale(0.98);
+    }
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 15px;
+    }
+
+    .item-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #d4af37;
+      margin-bottom: 5px;
+    }
+
+    .item-serial {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #999;
+    }
+
+    .item-badge {
+      background: rgba(76, 217, 100, 0.2);
+      color: #4cd964;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .item-details {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .item-detail-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+
+    .item-detail-label {
+      color: #999;
+    }
+
+    .item-detail-value {
+      color: #fff;
+      font-weight: 500;
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      flex: 1;
+      background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+      color: #1a1a1a;
+      border: none;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: #d4af37;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      opacity: 0.3;
+    }
+
+    .empty-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      color: #d4af37;
+      margin-bottom: 10px;
+    }
+
+    .empty-text {
+      color: #999;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 25px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .spinner {
+      border: 3px solid rgba(212, 175, 55, 0.2);
+      border-top: 3px solid #d4af37;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <button class="back-btn" onclick="goBack()">←</button>
+    <h1>💎 My Items</h1>
+  </div>
+
+  <div class="container">
+    <div class="wallet-status" id="walletStatus">
+      <div class="wallet-label">Connected Wallet</div>
+      <div class="wallet-address" id="walletAddress">Loading...</div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" id="totalItems">0</div>
+        <div class="stat-label">Items Owned</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalValue">$0</div>
+        <div class="stat-label">Est. Value</div>
+      </div>
+    </div>
+
+    <div class="section-title">
+      📦 Your Items
+    </div>
+
+    <div id="itemsList">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div>Loading your items...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/wallet-auth.js"></script>
+  <script>
+    let userWallet = null;
+
+    window.addEventListener('load', () => {
+      // Check authentication
+      if (!WalletAuth.requireAuth('/m/items')) {
+        return;
+      }
+
+      userWallet = WalletAuth.getWallet();
+      if (userWallet) {
+        displayWalletInfo();
+        loadUserItems();
+      }
+    });
+
+    function displayWalletInfo() {
+      const preview = WalletAuth.getAddressPreview();
+      document.getElementById('walletAddress').textContent = preview;
+    }
+
+    async function loadUserItems() {
+      try {
+        // Fetch all items
+        const response = await fetch('/api/registry/items');
+        const data = await response.json();
+        const allItems = data.items || [];
+
+        // Filter items owned by this wallet
+        const userItems = allItems.filter(item => 
+          item.ownerPubKey === userWallet.address || 
+          item.ownerPubKey === userWallet.publicKey ||
+          item.manufacturerId === userWallet.address
+        );
+
+        displayItems(userItems);
+        updateStats(userItems);
+      } catch (error) {
+        console.error('Error loading items:', error);
+        document.getElementById('itemsList').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚠️</div>
+            <div class="empty-title">Error Loading Items</div>
+            <div class="empty-text">${error.message}</div>
+          </div>
+        `;
+      }
+    }
+
+    function displayItems(items) {
+      const container = document.getElementById('itemsList');
+
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📦</div>
+            <div class="empty-title">No Items Yet</div>
+            <div class="empty-text">
+              You don't own any items yet. Scan a QR code or make an offer to acquire items.
+            </div>
+            <button class="btn" onclick="window.location.href='/m/verify'">
+              🔍 Verify Items
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = items.map(item => `
+        <div class="item-card">
+          <div class="item-header">
+            <div>
+              <div class="item-title">${item.itemType || 'Unknown Item'}</div>
+              <div class="item-serial">SN: ${item.serialNumber || item.itemId.substring(0, 20)}</div>
+            </div>
+            <div class="item-badge">${item.state || 'ACTIVE'}</div>
+          </div>
+
+          <div class="item-details">
+            <div class="item-detail-row">
+              <span class="item-detail-label">Item ID</span>
+              <span class="item-detail-value" style="font-family: monospace; font-size: 11px;">${item.itemId.substring(0, 20)}...</span>
+            </div>
+            <div class="item-detail-row">
+              <span class="item-detail-label">Registered</span>
+              <span class="item-detail-value">${new Date(item.registeredAt).toLocaleDateString()}</span>
+            </div>
+            ${item.description ? `
+              <div class="item-detail-row">
+                <span class="item-detail-label">Description</span>
+                <span class="item-detail-value">${item.description}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="item-actions">
+            <button class="btn btn-secondary" onclick="viewItemDetails('${item.itemId}')">
+              📋 Details
+            </button>
+            <button class="btn btn-secondary" onclick="transferItem('${item.itemId}')">
+              🔄 Transfer
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function updateStats(items) {
+      document.getElementById('totalItems').textContent = items.length;
+      
+      // Calculate estimated value (mock for now)
+      const totalValue = items.length * 100; // $100 per item estimate
+      document.getElementById('totalValue').textContent = `$${totalValue.toLocaleString()}`;
+    }
+
+    function viewItemDetails(itemId) {
+      window.location.href = `/m/verify?itemId=${encodeURIComponent(itemId)}`;
+    }
+
+    function transferItem(itemId) {
+      const newOwner = prompt('Enter new owner\'s Bitcoin address:');
+      if (!newOwner) return;
+
+      const confirmed = confirm(`Transfer item ${itemId.substring(0, 20)}... to ${newOwner.substring(0, 20)}...?`);
+      if (!confirmed) return;
+
+      alert('Transfer functionality coming soon! This will require:\n\n1. Payment verification\n2. Signature from current owner\n3. Operator quorum approval');
+    }
+
+    function goBack() {
+      window.location.href = '/m';
+    }
+  </script>
+</body>
+</html>

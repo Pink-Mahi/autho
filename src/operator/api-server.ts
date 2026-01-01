@@ -399,6 +399,151 @@ export class OperatorAPIServer {
       }
     });
 
+    // Offer API endpoints
+    this.app.post('/api/offers/create', async (req: Request, res: Response) => {
+      try {
+        const { itemId, buyerAddress, amount, sats, expiresIn } = req.body;
+        
+        if (!itemId || !buyerAddress || !amount || !sats) {
+          res.status(400).json({ error: 'Missing required fields' });
+          return;
+        }
+
+        const offerId = `OFFER_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        const expiresAt = Date.now() + (expiresIn || 86400000); // Default 24 hours
+
+        const offer = {
+          offerId,
+          itemId,
+          buyerAddress,
+          amount,
+          sats,
+          status: 'PENDING',
+          createdAt: Date.now(),
+          expiresAt,
+          paymentAddress: 'bc1qpay' + Math.random().toString(36).substring(7) // Mock payment address
+        };
+
+        // Store offer in memory
+        if (!(this.node as any).offers) {
+          (this.node as any).offers = new Map();
+        }
+        (this.node as any).offers.set(offerId, offer);
+
+        console.log(`[API] Offer created: ${offerId}`);
+
+        res.json({ 
+          success: true, 
+          offerId,
+          offer,
+          message: 'Offer created successfully'
+        });
+      } catch (error: any) {
+        console.error('[API] Error creating offer:', error);
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/offers/user/:address', async (req: Request, res: Response) => {
+      try {
+        const offersMap = (this.node as any).offers || new Map();
+        const allOffers = Array.from(offersMap.values());
+        
+        // Filter offers by buyer address
+        const userOffers = allOffers.filter((o: any) => o.buyerAddress === req.params.address);
+        
+        res.json({ offers: userOffers, count: userOffers.length });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/offers/:offerId', async (req: Request, res: Response) => {
+      try {
+        const offersMap = (this.node as any).offers || new Map();
+        const offer = offersMap.get(req.params.offerId);
+        
+        if (!offer) {
+          res.status(404).json({ error: 'Offer not found' });
+          return;
+        }
+        
+        res.json(offer);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.post('/api/offers/:offerId/cancel', async (req: Request, res: Response) => {
+      try {
+        const offersMap = (this.node as any).offers || new Map();
+        const offer = offersMap.get(req.params.offerId);
+        
+        if (!offer) {
+          res.status(404).json({ error: 'Offer not found' });
+          return;
+        }
+
+        offer.status = 'CANCELLED';
+        offer.cancelledAt = Date.now();
+        
+        res.json({ success: true, message: 'Offer cancelled' });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Transaction history API
+    this.app.get('/api/history/:address', async (req: Request, res: Response) => {
+      try {
+        // Mock transaction history for now
+        const transactions: any[] = [];
+        
+        // Get user's items
+        const itemsMap = (this.node as any).items || new Map();
+        const userItems = Array.from(itemsMap.values()).filter((item: any) => 
+          item.ownerPubKey === req.params.address || 
+          item.manufacturerId === req.params.address
+        );
+
+        // Add item registrations to history
+        userItems.forEach((item: any) => {
+          transactions.push({
+            type: 'ITEM_REGISTERED',
+            itemId: item.itemId,
+            itemName: item.itemType,
+            timestamp: item.registeredAt,
+            description: `Registered ${item.itemType}`
+          });
+        });
+
+        // Get user's offers
+        const offersMap = (this.node as any).offers || new Map();
+        const userOffers = Array.from(offersMap.values()).filter((o: any) => 
+          o.buyerAddress === req.params.address
+        );
+
+        // Add offers to history
+        userOffers.forEach((offer: any) => {
+          transactions.push({
+            type: 'OFFER_CREATED',
+            itemId: offer.itemId,
+            amount: offer.amount,
+            sats: offer.sats,
+            timestamp: offer.createdAt,
+            description: `Made offer of $${offer.amount}`
+          });
+        });
+
+        // Sort by timestamp descending
+        transactions.sort((a, b) => b.timestamp - a.timestamp);
+        
+        res.json({ transactions, count: transactions.length });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
     this.app.post('/api/event/sign', async (req: Request, res: Response) => {
       try {
         const event: ProtocolEvent = req.body;

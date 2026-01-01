@@ -718,12 +718,21 @@
             document.getElementById('itemsTracked').textContent = registryStats.totalItems;
         }
 
-        function loadRegistryStats() {
+        async function loadRegistryStats() {
+            // Fetch items from API
+            try {
+                const response = await fetch('/api/registry/items');
+                const data = await response.json();
+                allItems = data.items || [];
+            } catch (error) {
+                console.error('Error fetching items:', error);
+            }
+
             updateRegistryStats();
             const container = document.getElementById('itemInventory');
             
             if (allItems.length === 0) {
-                container.innerHTML = '<div class="empty-state">No items registered yet. Use the form above to register physical items.</div>';
+                container.innerHTML = '<div class="empty-state">No items registered yet. Visit the manufacturer dashboard to register items.</div>';
                 return;
             }
 
@@ -732,17 +741,21 @@
                     <thead>
                         <tr>
                             <th>Item ID</th>
+                            <th>Type</th>
+                            <th>Serial Number</th>
                             <th>Status</th>
-                            <th>Current Owner</th>
+                            <th>Owner</th>
                             <th>Registered At</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${allItems.slice(-10).reverse().map(item => `
                             <tr>
-                                <td style="font-family: monospace; font-size: 0.85rem;">${item.itemId.substr(0, 20)}...</td>
-                                <td><span class="status-badge status-online">${item.status}</span></td>
-                                <td style="font-family: monospace; font-size: 0.85rem;">${item.currentOwner.substr(0, 15)}...</td>
+                                <td style="font-family: monospace; font-size: 0.85rem;">${item.itemId.substring(0, 20)}...</td>
+                                <td>${item.itemType || 'Unknown'}</td>
+                                <td style="font-family: monospace; font-size: 0.85rem;">${item.serialNumber || '-'}</td>
+                                <td><span class="status-badge status-online">${item.state || 'ACTIVE'}</span></td>
+                                <td style="font-family: monospace; font-size: 0.85rem;">${(item.ownerPubKey || item.manufacturerId || 'Unknown').substring(0, 15)}...</td>
                                 <td>${new Date(item.registeredAt).toLocaleString()}</td>
                             </tr>
                         `).join('')}
