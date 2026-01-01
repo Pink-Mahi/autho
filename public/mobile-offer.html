@@ -412,11 +412,23 @@
     </div>
   </div>
 
+  <script src="/wallet-auth.js"></script>
   <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const itemId = urlParams.get('itemId');
+    let itemId = null;
     let currentItem = null;
     let btcRate = 40000; // Mock BTC/USD rate
+
+    // Get item ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    itemId = urlParams.get('itemId');
+
+    // Check authentication on load
+    window.addEventListener('load', () => {
+      if (!WalletAuth.requireAuth('/m/offer?itemId=' + itemId)) {
+        return;
+      }
+      loadItem();
+    });
 
     window.goBack = () => {
       window.history.back();
