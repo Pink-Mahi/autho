@@ -533,36 +533,36 @@
         const expiry = parseInt(document.getElementById('offerExpiry').value);
         const sats = Math.floor((usdAmount / btcRate) * 100000000);
 
-        // Create offer payload
-        const offerPayload = {
-          itemId: itemId,
-          buyerPubKey: wallet.publicKey,
-          offerAmountSats: sats,
-          expiresAt: Date.now() + (expiry * 1000),
-          timestamp: Date.now(),
-          nonce: Math.random().toString(36).substring(7)
-        };
+        // Get item details
+        const itemResponse = await fetch(`/api/registry/item/${encodeURIComponent(itemId)}`);
+        const itemData = await itemResponse.json();
 
-        // TODO: Sign offer with wallet
-        const signature = 'mock_signature_' + Date.now();
-
-        // Submit offer
+        // Submit offer to API
         const response = await fetch('/api/offers/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            offer: offerPayload,
-            signature: signature
+            itemId: itemId,
+            buyerAddress: wallet.address,
+            amount: usdAmount,
+            sats: sats,
+            expiresIn: expiry * 1000,
+            itemName: itemData.itemType || 'Unknown Item'
           })
         });
 
-        if (!response.ok) throw new Error('Failed to submit offer');
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to submit offer');
+        }
 
         const result = await response.json();
         
         // Show success
-        document.getElementById('submittedOfferId').textContent = result.offerId || 'OFFER-' + Date.now();
+        document.getElementById('submittedOfferId').textContent = result.offerId;
         document.getElementById('submittedAmount').textContent = `$${usdAmount.toFixed(2)}`;
+        document.getElementById('submittedSats').textContent = `${sats.toLocaleString()} sats`;
+        document.getElementById('paymentAddress').textContent = result.offer.paymentAddress;
         
         showScreen('offerSubmittedScreen');
       } catch (error) {

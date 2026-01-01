@@ -402,7 +402,7 @@ export class OperatorAPIServer {
     // Offer API endpoints
     this.app.post('/api/offers/create', async (req: Request, res: Response) => {
       try {
-        const { itemId, buyerAddress, amount, sats, expiresIn } = req.body;
+        const { itemId, buyerAddress, amount, sats, expiresIn, itemName } = req.body;
         
         if (!itemId || !buyerAddress || !amount || !sats) {
           res.status(400).json({ error: 'Missing required fields' });
@@ -415,6 +415,7 @@ export class OperatorAPIServer {
         const offer = {
           offerId,
           itemId,
+          itemName: itemName || 'Unknown Item',
           buyerAddress,
           amount,
           sats,
@@ -430,7 +431,7 @@ export class OperatorAPIServer {
         }
         (this.node as any).offers.set(offerId, offer);
 
-        console.log(`[API] Offer created: ${offerId}`);
+        console.log(`[API] Offer created: ${offerId} for ${itemName}`);
 
         res.json({ 
           success: true, 
