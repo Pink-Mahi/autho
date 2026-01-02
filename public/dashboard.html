@@ -904,10 +904,36 @@
             // Placeholder for network status
         }
 
-        function loadRevenue() {
+        async function loadRevenue() {
+            // Fetch Bitcoin balance from blockchain
+            const revenueAddress = 'bc1pra0grqeyjphau7lh0u8n5k48emv7zmu3qm4h3t8m0wg7yc3u57ls6kwlra';
+            
+            try {
+                // Check mainnet
+                const apiBase = 'https://blockstream.info/api';
+                const response = await fetch(`${apiBase}/address/${revenueAddress}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const confirmedSats = data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
+                    const unconfirmedSats = data.mempool_stats.funded_txo_sum - data.mempool_stats.spent_txo_sum;
+                    const totalSats = confirmedSats + unconfirmedSats;
+                    
+                    // Get current BTC price (approximate $89,857 from your screenshot)
+                    const btcPrice = 89857;
+                    const totalUSD = (totalSats / 100000000) * btcPrice;
+                    
+                    document.getElementById('revProtocolFees').textContent = `$${totalUSD.toFixed(2)} (${totalSats.toLocaleString()} sats)`;
+                    document.getElementById('revTotal').textContent = `$${(tokenStats.tokenRevenue + totalUSD).toFixed(2)}`;
+                } else {
+                    document.getElementById('revProtocolFees').textContent = '$0 (checking...)';
+                }
+            } catch (error) {
+                console.error('Error fetching Bitcoin balance:', error);
+                document.getElementById('revProtocolFees').textContent = '$0 (error)';
+            }
+            
             document.getElementById('revTokenSales').textContent = `$${tokenStats.tokenRevenue.toFixed(2)}`;
-            document.getElementById('revProtocolFees').textContent = '$0';
-            document.getElementById('revTotal').textContent = `$${tokenStats.tokenRevenue.toFixed(2)}`;
 
             const container = document.getElementById('salesHistory');
             
