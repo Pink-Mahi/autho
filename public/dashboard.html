@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Main Node Dashboard - Bitcoin Ownership Protocol</title>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Montserrat:wght@300;400;500;600&display=swap');
         
@@ -693,13 +693,17 @@
                 </div>
             </div>
 
-            <h3 style="margin-bottom: 15px;">💳 Your Bitcoin Wallet</h3>
+            <h3 style="margin-bottom: 15px;">💳 Revenue Bitcoin Wallet</h3>
             <div style="background: #e7f3ff; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
                 <p style="margin-bottom: 10px;"><strong>Address:</strong></p>
-                <p style="font-family: monospace; word-break: break-all; font-size: 0.9rem;">
+                <p style="font-family: monospace; word-break: break-all; font-size: 0.9rem; margin-bottom: 15px;">
                     bc1pra0grqeyjphau7lh0u8n5k48emv7zmu3qm4h3t8m0wg7yc3u57ls6kwlra
                 </p>
-                <p style="margin-top: 15px; color: #666;">All token sales and protocol fees are sent to this address.</p>
+                <button onclick="copyRevenueAddress()" style="background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%); color: #0a0a0a; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-right: 10px;">📋 Copy Address</button>
+                <div id="revenueQR" style="text-align: center; margin-top: 20px; background: white; padding: 20px; border-radius: 10px;">
+                    <canvas id="revenueQRCanvas"></canvas>
+                </div>
+                <p style="margin-top: 15px; color: #666;">All token sales and protocol fees (0.75%) are sent to this address.</p>
             </div>
 
             <h3 style="margin-bottom: 15px;">📊 Sales History</h3>
@@ -905,13 +909,37 @@
         }
 
         async function loadRevenue() {
-            // Fetch Bitcoin balance from blockchain
+            // Generate QR code for revenue address
             const revenueAddress = 'bc1pra0grqeyjphau7lh0u8n5k48emv7zmu3qm4h3t8m0wg7yc3u57ls6kwlra';
+            
+            try {
+                const qrCanvas = document.getElementById('revenueQRCanvas');
+                if (qrCanvas && typeof QRCode !== 'undefined') {
+                    await QRCode.toCanvas(qrCanvas, revenueAddress, {
+                        width: 250,
+                        margin: 2,
+                        color: {
+                            dark: '#000000',
+                            light: '#ffffff'
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error generating QR code:', error);
+            }
+            
+            // Fetch Bitcoin balance from blockchain
+            document.getElementById('revProtocolFees').textContent = 'Loading...';
             
             try {
                 // Check mainnet
                 const apiBase = 'https://blockstream.info/api';
-                const response = await fetch(`${apiBase}/address/${revenueAddress}`);
+                const response = await fetch(`${apiBase}/address/${revenueAddress}`, {
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
                 
                 if (response.ok) {
                     const data = await response.json();
@@ -919,18 +947,29 @@
                     const unconfirmedSats = data.mempool_stats.funded_txo_sum - data.mempool_stats.spent_txo_sum;
                     const totalSats = confirmedSats + unconfirmedSats;
                     
-                    // Get current BTC price (approximate $89,857 from your screenshot)
-                    const btcPrice = 89857;
+                    // Fetch current BTC price
+                    let btcPrice = 89857; // fallback
+                    try {
+                        const priceResponse = await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot');
+                        if (priceResponse.ok) {
+                            const priceData = await priceResponse.json();
+                            btcPrice = parseFloat(priceData.data.amount);
+                        }
+                    } catch (e) {
+                        console.log('Using fallback BTC price');
+                    }
+                    
                     const totalUSD = (totalSats / 100000000) * btcPrice;
                     
                     document.getElementById('revProtocolFees').textContent = `$${totalUSD.toFixed(2)} (${totalSats.toLocaleString()} sats)`;
                     document.getElementById('revTotal').textContent = `$${(tokenStats.tokenRevenue + totalUSD).toFixed(2)}`;
                 } else {
-                    document.getElementById('revProtocolFees').textContent = '$0 (checking...)';
+                    throw new Error(`API returned ${response.status}`);
                 }
             } catch (error) {
                 console.error('Error fetching Bitcoin balance:', error);
-                document.getElementById('revProtocolFees').textContent = '$0 (error)';
+                document.getElementById('revProtocolFees').textContent = '$0 (Unable to fetch balance)';
+                document.getElementById('revTotal').textContent = `$${tokenStats.tokenRevenue.toFixed(2)}`;
             }
             
             document.getElementById('revTokenSales').textContent = `$${tokenStats.tokenRevenue.toFixed(2)}`;
@@ -964,6 +1003,15 @@
                     </tbody>
                 </table>
             `;
+        }
+
+        function copyRevenueAddress() {
+            const address = 'bc1pra0grqeyjphau7lh0u8n5k48emv7zmu3qm4h3t8m0wg7yc3u57ls6kwlra';
+            navigator.clipboard.writeText(address).then(() => {
+                alert('✅ Revenue wallet address copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
         }
 
         // Update total price calculation
