@@ -90,6 +90,11 @@ export class OperatorAPIServer {
       res.sendFile('admin-login.html', { root: './public' });
     });
 
+    // Address diagnostic page
+    this.app.get('/check-addresses.html', (req: Request, res: Response) => {
+      res.sendFile('check-addresses.html', { root: './public' });
+    });
+
     // Dashboard with auth check
     this.app.get('/dashboard', (req: Request, res: Response) => {
       res.sendFile('dashboard.html', { root: './public' });
