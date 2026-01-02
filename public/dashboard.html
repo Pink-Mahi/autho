@@ -1094,15 +1094,25 @@
             
             // Clear any existing QR code
             qrContainer.innerHTML = '';
-            
             // Generate new QR code
-            new QRCode(qrContainer, {
-                text: address,
+            const canvas = document.createElement('canvas');
+            qrContainer.appendChild(canvas);
+
+            if (typeof QRCode === 'undefined' || typeof QRCode.toCanvas !== 'function') {
+                qrContainer.innerHTML = '<div style="color:#333; font-family: monospace;">QR library not loaded</div>';
+                return;
+            }
+
+            QRCode.toCanvas(canvas, address, {
                 width: 200,
-                height: 200,
-                colorDark: '#000000',
-                colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.H
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#ffffff'
+                }
+            }).catch((err) => {
+                console.error('Error generating Node Wallet QR:', err);
+                qrContainer.innerHTML = '<div style="color:#333; font-family: monospace;">Failed to generate QR</div>';
             });
         }
 
