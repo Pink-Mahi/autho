@@ -364,7 +364,10 @@
             <div class="seed-phrase">
                 <h3 style="color: #d4af37; margin-bottom: 15px;">Your Seed Phrase</h3>
                 <div class="seed-words" id="seedWords"></div>
-                <button class="copy-btn" onclick="copySeedPhrase()">📋 Copy to Clipboard</button>
+                <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                    <button class="copy-btn" onclick="copySeedPhrase()" style="flex: 1; min-width: 150px;">📋 Copy to Clipboard</button>
+                    <button class="copy-btn" onclick="downloadSeedPhrase()" style="flex: 1; min-width: 150px;">💾 Download as Text</button>
+                </div>
             </div>
 
             <div class="qr-section">
@@ -563,7 +566,55 @@
 
         function copySeedPhrase() {
             navigator.clipboard.writeText(walletData.mnemonic);
-            alert('✅ Seed phrase copied to clipboard!');
+            alert('✅ Seed phrase copied to clipboard!\n\n⚠️ Paste it somewhere safe immediately.');
+        }
+
+        function downloadSeedPhrase() {
+            const seedText = `BITCOIN WALLET SEED PHRASE
+============================
+
+Username: ${userData.username}
+Created: ${new Date().toLocaleString()}
+
+SEED PHRASE (12 words):
+${walletData.mnemonic}
+
+Bitcoin Address:
+${walletData.bitcoinAddress}
+
+${walletData.lightningAddress ? `Lightning Address:\n${walletData.lightningAddress}\n\n` : ''}
+⚠️ CRITICAL SECURITY WARNING ⚠️
+================================
+This seed phrase gives COMPLETE CONTROL over your Bitcoin wallet.
+Anyone with these words can access and spend your funds.
+
+KEEP THIS FILE SECURE:
+- Store in encrypted folder
+- Use strong password protection
+- Never share with anyone
+- Never upload to cloud unencrypted
+- Make multiple backup copies
+- Store in different secure locations
+
+If you lose this seed phrase, you will PERMANENTLY lose access to your funds.
+We cannot help you recover it.
+
+============================
+Bitcoin Ownership Protocol
+Non-Custodial Wallet Backup
+============================`;
+
+            const blob = new Blob([seedText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `wallet-seed-${userData.username}-${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('✅ Seed phrase downloaded!\n\n⚠️ IMPORTANT:\n• Encrypt this file immediately\n• Store in a secure location\n• Never share with anyone');
         }
 
         // Enable continue button when both checkboxes are checked
