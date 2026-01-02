@@ -653,17 +653,26 @@ export class OperatorAPIServer {
           const response = await fetch(`${apiBase}/address/${walletAddress}`);
           const addressData = await response.json();
 
+          console.log('[Wallet Balance] API Response:', JSON.stringify(addressData, null, 2));
+
           // Calculate balance from chain stats
-          const confirmedSats = addressData.chain_stats.funded_txo_sum - addressData.chain_stats.spent_txo_sum;
-          const unconfirmedSats = addressData.mempool_stats.funded_txo_sum - addressData.mempool_stats.spent_txo_sum;
+          const confirmedSats = (addressData.chain_stats?.funded_txo_sum || 0) - (addressData.chain_stats?.spent_txo_sum || 0);
+          const unconfirmedSats = (addressData.mempool_stats?.funded_txo_sum || 0) - (addressData.mempool_stats?.spent_txo_sum || 0);
+          
+          console.log('[Wallet Balance] Confirmed sats:', confirmedSats);
+          console.log('[Wallet Balance] Unconfirmed sats:', unconfirmedSats);
           
           const balance = {
             address: walletAddress,
             confirmed: confirmedSats / 100000000, // Convert sats to BTC
             unconfirmed: unconfirmedSats / 100000000,
-            total: (confirmedSats + unconfirmedSats) / 100000000
+            total: (confirmedSats + unconfirmedSats) / 100000000,
+            confirmedSats: confirmedSats,
+            unconfirmedSats: unconfirmedSats,
+            totalSats: confirmedSats + unconfirmedSats
           };
 
+          console.log('[Wallet Balance] Final balance:', balance);
           res.json(balance);
         } catch (apiError) {
           console.error('Blockchain API error:', apiError);
@@ -752,36 +761,40 @@ export class OperatorAPIServer {
 
           const transactions = txs.map((tx: any) => {
             // Calculate if this is a receive or send transaction
-            let amount = 0;
-            let type = 'receive';
+            let receivedAmount = 0;
+            let sentAmount = 0;
             
             // Check outputs for receives
             tx.vout.forEach((output: any) => {
               if (output.scriptpubkey_address === walletAddress) {
-                amount += output.value;
+                receivedAmount += output.value;
               }
             });
 
             // Check inputs for sends
-            let sentAmount = 0;
             tx.vin.forEach((input: any) => {
               if (input.prevout?.scriptpubkey_address === walletAddress) {
                 sentAmount += input.prevout.value;
-                type = 'send';
               }
             });
 
-            // For sends, amount is what was sent out minus change received
-            if (type === 'send') {
-              amount = sentAmount - amount;
+            // Determine transaction type and net amount
+            let type = 'receive';
+            let netAmount = receivedAmount;
+            
+            if (sentAmount > 0) {
+              type = 'send';
+              netAmount = sentAmount - receivedAmount; // Amount sent (minus change)
             }
+
+            console.log(`[TX ${tx.txid.substring(0, 10)}] Type: ${type}, Received: ${receivedAmount}, Sent: ${sentAmount}, Net: ${netAmount}`);
 
             return {
               txid: tx.txid,
               type: type,
-              amount: amount / 100000000, // Convert sats to BTC
-              confirmations: tx.status.confirmed ? tx.status.block_height ? 
-                (tx.status.block_height > 0 ? 6 : 0) : 0 : 0,
+              amount: netAmount / 100000000, // Convert sats to BTC
+              amountSats: netAmount,
+              confirmations: tx.status.confirmed ? (tx.status.block_height ? 6 : 0) : 0,
               timestamp: tx.status.block_time ? tx.status.block_time * 1000 : Date.now(),
               address: walletAddress
             };
