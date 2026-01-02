@@ -706,6 +706,32 @@
                 <p style="margin-top: 15px; color: #666;">All token sales and protocol fees (0.75%) are sent to this address.</p>
             </div>
 
+            <div style="background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%); border: 1px solid #d4af37; padding: 25px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="margin-bottom: 15px; color: #d4af37;">📤 Send Bitcoin</h3>
+                <div class="success-message" id="revSendSuccess"></div>
+                <div class="error-message" id="revSendError"></div>
+                <form id="revSendForm" onsubmit="sendRevenueBitcoin(event)">
+                    <div class="form-group">
+                        <label>Recipient Address *</label>
+                        <input type="text" id="revSendToAddress" required placeholder="bc1q... or 1...">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Amount (BTC) *</label>
+                            <input type="number" id="revSendAmount" step="0.00000001" min="0.00000001" required placeholder="0.00000000">
+                        </div>
+                        <div class="form-group">
+                            <label>Fee (BTC) (optional)</label>
+                            <input type="number" id="revSendFee" step="0.00000001" min="0" placeholder="0.00001000">
+                        </div>
+                    </div>
+                    <div style="background: rgba(255, 149, 0, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(255, 149, 0, 0.3);">
+                        <strong style="color: #ff9500;">⚠️ Warning:</strong> <span style="color: #999;">Double-check the recipient address. Bitcoin transactions are irreversible.</span>
+                    </div>
+                    <button type="submit" class="btn">📤 Send Bitcoin</button>
+                </form>
+            </div>
+
             <h3 style="margin-bottom: 15px;">📊 Sales History</h3>
             <div id="salesHistory" class="empty-state">No sales yet</div>
         </div>
@@ -1016,6 +1042,49 @@
             }).catch(err => {
                 console.error('Failed to copy:', err);
             });
+        }
+
+        async function sendRevenueBitcoin(event) {
+            event.preventDefault();
+
+            const toAddress = document.getElementById('revSendToAddress').value.trim();
+            const amount = parseFloat(document.getElementById('revSendAmount').value);
+            const feeVal = document.getElementById('revSendFee').value;
+            const fee = feeVal ? parseFloat(feeVal) : undefined;
+
+            const successEl = document.getElementById('revSendSuccess');
+            const errorEl = document.getElementById('revSendError');
+            successEl.classList.remove('active');
+            errorEl.classList.remove('active');
+            successEl.textContent = '';
+            errorEl.textContent = '';
+
+            try {
+                const res = await fetch('/api/node/wallet/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ toAddress, amount, fee })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || data.message || 'Send failed');
+                }
+
+                successEl.textContent = `✅ Sent! TXID: ${data.txid}`;
+                successEl.classList.add('active');
+
+                document.getElementById('revSendForm').reset();
+
+                setTimeout(() => {
+                    loadWalletData();
+                    loadRevenue();
+                }, 1500);
+            } catch (err) {
+                errorEl.textContent = `❌ ${err.message || 'Send failed'}`;
+                errorEl.classList.add('active');
+            }
         }
 
         // Update total price calculation
