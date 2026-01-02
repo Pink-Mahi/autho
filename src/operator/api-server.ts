@@ -643,15 +643,38 @@ export class OperatorAPIServer {
           return;
         }
 
-        // Mock balance for now - in production, query actual Bitcoin node
-        const balance = {
-          address: walletAddress,
-          confirmed: 0.00015000, // 15,000 sats
-          unconfirmed: 0,
-          total: 0.00015000
-        };
+        // Query real blockchain data from Blockstream API
+        const network = process.env.BITCOIN_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
+        const apiBase = network === 'mainnet' 
+          ? 'https://blockstream.info/api'
+          : 'https://blockstream.info/testnet/api';
 
-        res.json(balance);
+        try {
+          const response = await fetch(`${apiBase}/address/${walletAddress}`);
+          const addressData = await response.json();
+
+          // Calculate balance from chain stats
+          const confirmedSats = addressData.chain_stats.funded_txo_sum - addressData.chain_stats.spent_txo_sum;
+          const unconfirmedSats = addressData.mempool_stats.funded_txo_sum - addressData.mempool_stats.spent_txo_sum;
+          
+          const balance = {
+            address: walletAddress,
+            confirmed: confirmedSats / 100000000, // Convert sats to BTC
+            unconfirmed: unconfirmedSats / 100000000,
+            total: (confirmedSats + unconfirmedSats) / 100000000
+          };
+
+          res.json(balance);
+        } catch (apiError) {
+          console.error('Blockchain API error:', apiError);
+          // Fallback to zero balance if API fails
+          res.json({
+            address: walletAddress,
+            confirmed: 0,
+            unconfirmed: 0,
+            total: 0
+          });
+        }
       } catch (error: any) {
         res.status(500).json({ error: error.message });
       }
@@ -710,19 +733,65 @@ export class OperatorAPIServer {
 
     this.app.get('/api/node/wallet/transactions', async (req: Request, res: Response) => {
       try {
-        // Mock transaction history - in production, query actual Bitcoin node
-        const transactions = [
-          {
-            txid: 'mock_tx_incoming_1',
-            type: 'receive',
-            amount: 0.00015000,
-            confirmations: 6,
-            timestamp: Date.now() - 3600000,
-            address: process.env.NODE_WALLET_ADDRESS || 'tb1q...'
-          }
-        ];
+        const walletAddress = process.env.NODE_WALLET_ADDRESS || this.node.getOperatorInfo().btcAddress;
+        
+        if (!walletAddress) {
+          res.json({ transactions: [], count: 0 });
+          return;
+        }
 
-        res.json({ transactions, count: transactions.length });
+        // Query real blockchain transactions from Blockstream API
+        const network = process.env.BITCOIN_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
+        const apiBase = network === 'mainnet' 
+          ? 'https://blockstream.info/api'
+          : 'https://blockstream.info/testnet/api';
+
+        try {
+          const response = await fetch(`${apiBase}/address/${walletAddress}/txs`);
+          const txs = await response.json();
+
+          const transactions = txs.map((tx: any) => {
+            // Calculate if this is a receive or send transaction
+            let amount = 0;
+            let type = 'receive';
+            
+            // Check outputs for receives
+            tx.vout.forEach((output: any) => {
+              if (output.scriptpubkey_address === walletAddress) {
+                amount += output.value;
+              }
+            });
+
+            // Check inputs for sends
+            let sentAmount = 0;
+            tx.vin.forEach((input: any) => {
+              if (input.prevout?.scriptpubkey_address === walletAddress) {
+                sentAmount += input.prevout.value;
+                type = 'send';
+              }
+            });
+
+            // For sends, amount is what was sent out minus change received
+            if (type === 'send') {
+              amount = sentAmount - amount;
+            }
+
+            return {
+              txid: tx.txid,
+              type: type,
+              amount: amount / 100000000, // Convert sats to BTC
+              confirmations: tx.status.confirmed ? tx.status.block_height ? 
+                (tx.status.block_height > 0 ? 6 : 0) : 0 : 0,
+              timestamp: tx.status.block_time ? tx.status.block_time * 1000 : Date.now(),
+              address: walletAddress
+            };
+          });
+
+          res.json({ transactions, count: transactions.length });
+        } catch (apiError) {
+          console.error('Blockchain API error:', apiError);
+          res.json({ transactions: [], count: 0 });
+        }
       } catch (error: any) {
         res.status(500).json({ error: error.message });
       }
