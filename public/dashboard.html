@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Main Node Dashboard - Bitcoin Ownership Protocol</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Montserrat:wght@300;400;500;600&display=swap');
         
@@ -547,8 +548,8 @@
                             <button class="btn" onclick="copyAddress()" style="padding: 12px 20px;">📋 Copy</button>
                         </div>
                     </div>
-                    <div id="qrCode" style="text-align: center; padding: 20px; background: white; border-radius: 10px; margin-top: 15px;">
-                        <div style="color: #666; font-size: 0.9rem;">QR Code will appear here</div>
+                    <div id="qrCodeContainer" style="text-align: center; padding: 20px; background: white; border-radius: 10px; margin-top: 15px; display: flex; justify-content: center; align-items: center;">
+                        <div id="qrCode"></div>
                     </div>
                 </div>
             </div>
@@ -960,6 +961,24 @@
             }
         };
 
+        // Generate QR code for Bitcoin address
+        function generateQRCode(address) {
+            const qrContainer = document.getElementById('qrCode');
+            
+            // Clear any existing QR code
+            qrContainer.innerHTML = '';
+            
+            // Generate new QR code
+            new QRCode(qrContainer, {
+                text: address,
+                width: 200,
+                height: 200,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+
         // Get real-time BTC price from CoinGecko API
         async function getBTCPrice() {
             try {
@@ -981,6 +1000,9 @@
                 const addressData = await addressResponse.json();
                 document.getElementById('nodeWalletAddress').value = addressData.address;
                 document.getElementById('walletNetwork').textContent = addressData.network === 'mainnet' ? 'Mainnet' : 'Testnet';
+                
+                // Generate QR code
+                generateQRCode(addressData.address);
 
                 // Get wallet balance
                 const balanceResponse = await fetch('/api/node/wallet/balance');
