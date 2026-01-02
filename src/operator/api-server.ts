@@ -7,6 +7,7 @@ import { JoinAPI } from '../network/join-api';
 import { NetworkBootstrap } from '../network/bootstrap';
 import { ProtocolEvent } from '../types';
 import { BitcoinTransactionService } from '../bitcoin/transaction-service';
+import { PaymentService } from '../bitcoin/payment-service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -19,6 +20,7 @@ export class OperatorAPIServer {
   private itemRegistry: ItemRegistry;
   private joinAPI: JoinAPI;
   private bootstrap: NetworkBootstrap;
+  private paymentService: PaymentService;
 
   constructor(node: OperatorNode, port: number = 3000) {
     this.app = express();
@@ -27,6 +29,11 @@ export class OperatorAPIServer {
     
     const network = process.env.BITCOIN_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
     this.walletAPI = new WalletAPI(network);
+    
+    // Initialize payment service
+    const dataDir = process.env.OPERATOR_DATA_DIR || './operator-data';
+    this.paymentService = new PaymentService(dataDir, network as 'mainnet' | 'testnet');
+    this.paymentService.start();
     
     const operatorId = process.env.OPERATOR_ID || 'operator-1';
     const quorumM = parseInt(process.env.QUORUM_M || '3');
@@ -424,7 +431,35 @@ export class OperatorAPIServer {
         }
 
         const offerId = `OFFER_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-        const expiresAt = Date.now() + (expiresIn || 86400000); // Default 24 hours
+        const expirySeconds = Math.floor((expiresIn || 86400000) / 1000); // Convert ms to seconds
+
+        // Create real payment request
+        const paymentRequest = this.paymentService.createPaymentRequest(
+          {
+            offerId,
+            amountSats: sats,
+            expirySeconds,
+            metadata: { itemId, itemName, buyerAddress }
+          },
+          (payment) => {
+            // Callback when payment is confirmed
+            console.log(`[Payment] Confirmed for offer ${offerId}:`, payment);
+            
+            // Update offer status
+            const offer = (this.node as any).offers?.get(offerId);
+            if (offer) {
+              offer.status = payment.status === 'confirmed' ? 'PAID' : 'PENDING';
+              offer.paymentTxid = payment.txid;
+              offer.paymentConfirmations = payment.confirmations;
+              
+              // TODO: Trigger settlement when payment confirmed
+              if (payment.status === 'confirmed') {
+                console.log(`[Settlement] Ready to settle offer ${offerId}`);
+                // This is where you'd trigger the ownership transfer
+              }
+            }
+          }
+        );
 
         const offer = {
           offerId,
@@ -435,8 +470,9 @@ export class OperatorAPIServer {
           sats,
           status: 'PENDING',
           createdAt: Date.now(),
-          expiresAt,
-          paymentAddress: 'bc1qpay' + Math.random().toString(36).substring(7) // Mock payment address
+          expiresAt: paymentRequest.expiresAt,
+          paymentAddress: paymentRequest.paymentAddress,
+          paymentQR: paymentRequest.qrData
         };
 
         // Store offer in memory
@@ -446,12 +482,14 @@ export class OperatorAPIServer {
         (this.node as any).offers.set(offerId, offer);
 
         console.log(`[API] Offer created: ${offerId} for ${itemName}`);
+        console.log(`[API] Payment address: ${paymentRequest.paymentAddress}`);
+        console.log(`[API] Amount: ${sats} sats (${paymentRequest.amountBTC} BTC)`);
 
         res.json({ 
           success: true, 
           offerId,
           offer,
-          message: 'Offer created successfully'
+          message: 'Offer created successfully. Send Bitcoin to the payment address to complete purchase.'
         });
       } catch (error: any) {
         console.error('[API] Error creating offer:', error);
