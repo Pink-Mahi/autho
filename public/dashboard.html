@@ -359,6 +359,30 @@
             color: #ff6b6b;
             border: 1px solid #7a2a2a;
         }
+
+        .currency-toggle {
+            background: rgba(42, 42, 42, 0.8);
+            border: 1px solid #555;
+            color: #999;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .currency-toggle:hover {
+            border-color: #d4af37;
+            color: #d4af37;
+        }
+
+        .currency-toggle.active {
+            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+            border-color: #d4af37;
+            color: #0a0a0a;
+            box-shadow: 0 3px 10px rgba(212, 175, 55, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -564,14 +588,39 @@
                         <label>Recipient Address *</label>
                         <input type="text" id="sendToAddress" required placeholder="bc1q... or tb1q...">
                     </div>
+                    
+                    <!-- Currency Toggle -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px;">Amount Currency</label>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" class="currency-toggle active" data-currency="btc" onclick="toggleCurrency('btc')">
+                                ₿ BTC
+                            </button>
+                            <button type="button" class="currency-toggle" data-currency="usd" onclick="toggleCurrency('usd')">
+                                $ USD
+                            </button>
+                            <button type="button" class="currency-toggle" data-currency="sats" onclick="toggleCurrency('sats')">
+                                ⚡ Sats
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Amount (BTC) *</label>
-                            <input type="number" id="sendAmount" step="0.00000001" min="0.00000001" required placeholder="0.00000000">
+                            <label id="amountLabel">Amount (BTC) *</label>
+                            <input type="number" id="sendAmount" step="0.00000001" min="0.00000001" required placeholder="0.00000000" oninput="updateAmountConversion()">
+                            <div id="amountConversion" style="font-size: 0.85rem; color: #999; margin-top: 5px;"></div>
                         </div>
                         <div class="form-group">
-                            <label>Network Fee (BTC)</label>
-                            <input type="number" id="sendFee" step="0.00000001" value="0.00001000" placeholder="0.00001000">
+                            <label>Network Fee (Priority)</label>
+                            <select id="feePriority" onchange="updateFeeEstimate()">
+                                <option value="low">Low (1-3 sats/byte) - Slow</option>
+                                <option value="medium" selected>Medium (5-10 sats/byte) - ~1 hour</option>
+                                <option value="high">High (20+ sats/byte) - ~10 min</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                            <input type="number" id="sendFee" step="0.00000001" value="0.00001000" placeholder="0.00001000" style="display: none; margin-top: 10px;">
+                            <div id="feeEstimate" style="font-size: 0.85rem; color: #999; margin-top: 5px;">Estimated: ~0.00001 BTC</div>
                         </div>
                     </div>
                     <div style="background: rgba(255, 149, 0, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(255, 149, 0, 0.3);">
@@ -1070,6 +1119,114 @@
             `;
         }
 
+        // Currency conversion state
+        let currentCurrency = 'btc';
+        let currentBTCPrice = 0;
+
+        window.toggleCurrency = (currency) => {
+            currentCurrency = currency;
+            
+            // Update button states
+            document.querySelectorAll('.currency-toggle').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.currency === currency) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Update label and input
+            const amountInput = document.getElementById('sendAmount');
+            const amountLabel = document.getElementById('amountLabel');
+            
+            if (currency === 'btc') {
+                amountLabel.textContent = 'Amount (BTC) *';
+                amountInput.step = '0.00000001';
+                amountInput.min = '0.00000001';
+                amountInput.placeholder = '0.00000000';
+            } else if (currency === 'usd') {
+                amountLabel.textContent = 'Amount (USD) *';
+                amountInput.step = '0.01';
+                amountInput.min = '0.01';
+                amountInput.placeholder = '0.00';
+            } else if (currency === 'sats') {
+                amountLabel.textContent = 'Amount (Sats) *';
+                amountInput.step = '1';
+                amountInput.min = '1';
+                amountInput.placeholder = '0';
+            }
+            
+            amountInput.value = '';
+            document.getElementById('amountConversion').textContent = '';
+        };
+
+        window.updateAmountConversion = async () => {
+            const amount = parseFloat(document.getElementById('sendAmount').value);
+            if (!amount || amount <= 0) {
+                document.getElementById('amountConversion').textContent = '';
+                return;
+            }
+
+            if (!currentBTCPrice) {
+                currentBTCPrice = await getBTCPrice();
+            }
+
+            let btcAmount, usdAmount, satsAmount;
+            
+            if (currentCurrency === 'btc') {
+                btcAmount = amount;
+                usdAmount = amount * currentBTCPrice;
+                satsAmount = Math.floor(amount * 100000000);
+            } else if (currentCurrency === 'usd') {
+                btcAmount = amount / currentBTCPrice;
+                usdAmount = amount;
+                satsAmount = Math.floor(btcAmount * 100000000);
+            } else if (currentCurrency === 'sats') {
+                btcAmount = amount / 100000000;
+                usdAmount = btcAmount * currentBTCPrice;
+                satsAmount = amount;
+            }
+
+            const conversions = [];
+            if (currentCurrency !== 'btc') conversions.push(`${btcAmount.toFixed(8)} BTC`);
+            if (currentCurrency !== 'usd') conversions.push(`$${usdAmount.toFixed(2)}`);
+            if (currentCurrency !== 'sats') conversions.push(`${satsAmount.toLocaleString()} sats`);
+            
+            document.getElementById('amountConversion').textContent = '≈ ' + conversions.join(' = ');
+        };
+
+        window.updateFeeEstimate = () => {
+            const priority = document.getElementById('feePriority').value;
+            const customFeeInput = document.getElementById('sendFee');
+            
+            if (priority === 'custom') {
+                customFeeInput.style.display = 'block';
+                document.getElementById('feeEstimate').textContent = 'Enter custom fee amount';
+            } else {
+                customFeeInput.style.display = 'none';
+                
+                let feeRate, confirmTime;
+                if (priority === 'low') {
+                    feeRate = 2;
+                    confirmTime = 'Hours to days';
+                } else if (priority === 'medium') {
+                    feeRate = 7;
+                    confirmTime = '~1 hour';
+                } else if (priority === 'high') {
+                    feeRate = 25;
+                    confirmTime = '~10 minutes';
+                }
+                
+                // Estimate transaction size (typical: 250 bytes)
+                const estimatedSize = 250;
+                const feeSats = estimatedSize * feeRate;
+                const feeBTC = feeSats / 100000000;
+                
+                customFeeInput.value = feeBTC.toFixed(8);
+                document.getElementById('feeEstimate').textContent = 
+                    `Estimated: ${feeSats.toLocaleString()} sats (~$${(feeBTC * currentBTCPrice).toFixed(2)}) - ${confirmTime}`;
+            }
+        };
+
         window.copyAddress = async () => {
             const address = document.getElementById('nodeWalletAddress').value;
             try {
@@ -1085,10 +1242,26 @@
             event.preventDefault();
             
             const toAddress = document.getElementById('sendToAddress').value;
-            const amount = parseFloat(document.getElementById('sendAmount').value);
+            let inputAmount = parseFloat(document.getElementById('sendAmount').value);
             const fee = parseFloat(document.getElementById('sendFee').value);
 
-            if (!confirm(`Send ${amount} BTC to ${toAddress}?\n\nThis action cannot be undone.`)) {
+            // Convert to BTC based on selected currency
+            let btcAmount;
+            if (currentCurrency === 'btc') {
+                btcAmount = inputAmount;
+            } else if (currentCurrency === 'usd') {
+                if (!currentBTCPrice) {
+                    currentBTCPrice = await getBTCPrice();
+                }
+                btcAmount = inputAmount / currentBTCPrice;
+            } else if (currentCurrency === 'sats') {
+                btcAmount = inputAmount / 100000000;
+            }
+
+            const satsAmount = Math.floor(btcAmount * 100000000);
+            const usdAmount = btcAmount * currentBTCPrice;
+
+            if (!confirm(`Send ${btcAmount.toFixed(8)} BTC (${satsAmount.toLocaleString()} sats ≈ $${usdAmount.toFixed(2)}) to ${toAddress}?\n\nThis action cannot be undone.`)) {
                 return;
             }
 
@@ -1096,7 +1269,7 @@
                 const response = await fetch('/api/node/wallet/send', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ toAddress, amount, fee })
+                    body: JSON.stringify({ toAddress, amount: btcAmount, fee })
                 });
 
                 const data = await response.json();
@@ -1105,6 +1278,9 @@
                     document.getElementById('sendSuccess').textContent = `✅ Transaction sent! TXID: ${data.txid}`;
                     document.getElementById('sendSuccess').classList.add('active');
                     document.getElementById('sendForm').reset();
+                    
+                    // Reset currency to BTC
+                    toggleCurrency('btc');
                     
                     // Reload wallet data
                     setTimeout(() => {
