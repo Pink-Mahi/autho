@@ -1124,11 +1124,7 @@
             try {
                 // Get wallet address
                 const addressResponse = await fetch('/api/node/wallet/address');
-                if (!addressResponse.ok) {
-                    throw new Error(`Address API failed: ${addressResponse.status}`);
-                }
                 const addressData = await addressResponse.json();
-                console.log('Address data:', addressData);
                 document.getElementById('nodeWalletAddress').value = addressData.address;
                 document.getElementById('walletNetwork').textContent = addressData.network === 'mainnet' ? 'Mainnet' : 'Testnet';
                 
@@ -1137,47 +1133,28 @@
 
                 // Get wallet balance
                 const balanceResponse = await fetch('/api/node/wallet/balance');
-                if (!balanceResponse.ok) {
-                    throw new Error(`Balance API failed: ${balanceResponse.status}`);
-                }
                 const balanceData = await balanceResponse.json();
-                console.log('Balance data:', balanceData);
                 
                 // Display BTC with full precision and sats in parentheses
-                const confirmedSats = balanceData.confirmedSats || Math.round((balanceData.confirmed || 0) * 100000000);
-                const unconfirmedSats = balanceData.unconfirmedSats || Math.round((balanceData.unconfirmed || 0) * 100000000);
-                const totalSats = balanceData.totalSats || Math.round((balanceData.total || 0) * 100000000);
+                const confirmedSats = balanceData.confirmedSats || Math.round(balanceData.confirmed * 100000000);
+                const unconfirmedSats = balanceData.unconfirmedSats || Math.round(balanceData.unconfirmed * 100000000);
+                const totalSats = balanceData.totalSats || Math.round(balanceData.total * 100000000);
                 
-                document.getElementById('walletBalance').textContent = (balanceData.confirmed || 0).toFixed(8) + ' BTC (' + confirmedSats.toLocaleString() + ' sats)';
-                document.getElementById('walletUnconfirmed').textContent = (balanceData.unconfirmed || 0).toFixed(8) + ' BTC (' + unconfirmedSats.toLocaleString() + ' sats)';
+                document.getElementById('walletBalance').textContent = balanceData.confirmed.toFixed(8) + ' BTC (' + confirmedSats.toLocaleString() + ' sats)';
+                document.getElementById('walletUnconfirmed').textContent = balanceData.unconfirmed.toFixed(8) + ' BTC (' + unconfirmedSats.toLocaleString() + ' sats)';
                 
                 // Get real-time BTC price
                 const btcPrice = await getBTCPrice();
-                const usdValue = (balanceData.total || 0) * btcPrice;
+                const usdValue = balanceData.total * btcPrice;
                 document.getElementById('walletUSD').textContent = '$' + usdValue.toFixed(2) + ' (' + totalSats.toLocaleString() + ' sats)';
                 document.getElementById('btcPrice').textContent = '$' + btcPrice.toLocaleString();
 
                 // Load transactions
-                try {
-                    const txResponse = await fetch('/api/node/wallet/transactions');
-                    if (txResponse.ok) {
-                        const txData = await txResponse.json();
-                        console.log('Transaction data:', txData);
-                        displayTransactions(txData.transactions || []);
-                    } else {
-                        console.warn('Transactions API failed:', txResponse.status);
-                        displayTransactions([]);
-                    }
-                } catch (txError) {
-                    console.warn('Error loading transactions:', txError);
-                    displayTransactions([]);
-                }
+                const txResponse = await fetch('/api/node/wallet/transactions');
+                const txData = await txResponse.json();
+                displayTransactions(txData.transactions);
             } catch (error) {
                 console.error('Error loading wallet data:', error);
-                // Show error in UI
-                document.getElementById('walletBalance').textContent = 'Error loading balance';
-                document.getElementById('walletUnconfirmed').textContent = 'Error';
-                document.getElementById('walletUSD').textContent = 'Error';
             }
         }
 
