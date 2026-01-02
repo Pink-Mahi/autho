@@ -6,6 +6,9 @@ import { ItemRegistry } from '../registry/item-registry';
 import { JoinAPI } from '../network/join-api';
 import { NetworkBootstrap } from '../network/bootstrap';
 import { ProtocolEvent } from '../types';
+import { BitcoinTransactionService } from '../bitcoin/transaction-service';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class OperatorAPIServer {
   private app: Express;
@@ -727,20 +730,51 @@ export class OperatorAPIServer {
           return;
         }
 
-        // Mock transaction for now - in production, use actual Bitcoin node
-        const txid = 'mock_tx_' + Math.random().toString(36).substring(7);
+        // Load private key from operator keys
+        const dataDir = process.env.OPERATOR_DATA_DIR || './operator-data';
+        const keysFile = path.join(dataDir, 'operator-keys.json');
         
-        console.log(`[Node Wallet] Send transaction: ${amount} BTC to ${toAddress}`);
+        if (!fs.existsSync(keysFile)) {
+          res.status(500).json({ error: 'Operator keys not found. Cannot send Bitcoin.' });
+          return;
+        }
+
+        const keys = JSON.parse(fs.readFileSync(keysFile, 'utf8'));
         
-        res.json({ 
-          success: true,
-          txid,
+        // Convert BTC to satoshis
+        const amountSats = Math.floor(amount * 100000000);
+        const feeRate = fee ? Math.floor(fee * 100000000) : undefined;
+
+        // Create Bitcoin transaction service
+        const network = process.env.BITCOIN_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
+        const txService = new BitcoinTransactionService(network);
+
+        console.log(`[Node Wallet] Sending ${amountSats} sats to ${toAddress}`);
+
+        // Send the transaction
+        const result = await txService.sendBitcoin(
+          keys.privateKey,
           toAddress,
-          amount,
-          fee: fee || 0.00001,
-          message: 'Transaction broadcast successfully'
-        });
+          amountSats,
+          feeRate
+        );
+
+        if (result.success) {
+          res.json({
+            success: true,
+            txid: result.txid,
+            toAddress,
+            amount,
+            message: 'Transaction broadcast successfully'
+          });
+        } else {
+          res.status(400).json({
+            success: false,
+            error: result.error
+          });
+        }
       } catch (error: any) {
+        console.error('[Node Wallet] Send error:', error);
         res.status(500).json({ error: error.message });
       }
     });
