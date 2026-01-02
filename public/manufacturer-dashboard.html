@@ -340,10 +340,86 @@
             border-radius: 10px;
             padding: 10px;
         }
+
+        .top-nav {
+            background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+            border: 1px solid #d4af37;
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.2);
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info {
+            color: #d4af37;
+            font-size: 0.9rem;
+        }
+
+        .btn-logout {
+            background: linear-gradient(135deg, #ff3b30 0%, #ff6b60 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-logout:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 59, 48, 0.4);
+        }
+
+        .btn-sell {
+            background: linear-gradient(135deg, #4cd964 0%, #5ee879 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .btn-sell:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 217, 100, 0.4);
+        }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
+        <!-- Top Navigation -->
+        <div class="top-nav">
+            <div class="nav-left">
+                <span style="font-size: 1.5rem;">🏭</span>
+                <span style="color: #d4af37; font-weight: 600;">Manufacturer Dashboard</span>
+            </div>
+            <div class="nav-right">
+                <div class="user-info">
+                    <span id="navUsername">Manufacturer</span>
+                </div>
+                <button class="btn-logout" onclick="logout()">🚪 Logout</button>
+            </div>
+        </div>
+
         <div class="header">
             <h1>🏭 Manufacturer Dashboard</h1>
             <p id="manufacturerName">Welcome back!</p>
@@ -532,9 +608,12 @@
                         <p>${item.description || 'No description'}</p>
                         <span class="item-id">ID: ${item.itemId}</span>
                     </div>
-                    <div>
+                    <div style="display: flex; gap: 10px;">
                         <button class="btn" onclick="viewItemQR('${item.itemId}')">
                             📱 View QR
+                        </button>
+                        <button class="btn-sell" onclick="sellItem('${item.itemId}')">
+                            💰 Sell This Item
                         </button>
                     </div>
                 </div>
@@ -691,8 +770,30 @@
             alert('Full inventory view coming soon! For now, see recent items below.');
         }
 
+        function sellItem(itemId) {
+            // Redirect to create offer page with item ID
+            window.location.href = `/create-offer.html?itemId=${itemId}`;
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                // Clear user session
+                localStorage.removeItem('userConfig');
+                localStorage.removeItem('autho_wallet_seed');
+                sessionStorage.clear();
+                
+                // Redirect to home
+                window.location.href = '/';
+            }
+        }
+
         // Load on page load
         loadConfig();
+        
+        // Update nav username
+        if (userConfig.name) {
+            document.getElementById('navUsername').textContent = userConfig.name;
+        }
     </script>
 </body>
 </html>

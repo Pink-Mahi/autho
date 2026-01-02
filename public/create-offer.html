@@ -215,10 +215,27 @@
                 display: none;
             }
         }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: #d4af37;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .back-link:hover {
+            color: #f4d03f;
+            transform: translateX(-5px);
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <a href="/manufacturer" class="back-link">← Back to Dashboard</a>
         <!-- Step 1: Enter Price -->
         <div class="step active" id="step1">
             <h1>💰 Sell This Item</h1>
