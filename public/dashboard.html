@@ -1007,13 +1007,19 @@
                 // Get wallet balance
                 const balanceResponse = await fetch('/api/node/wallet/balance');
                 const balanceData = await balanceResponse.json();
-                document.getElementById('walletBalance').textContent = balanceData.confirmed.toFixed(8) + ' BTC';
-                document.getElementById('walletUnconfirmed').textContent = balanceData.unconfirmed.toFixed(8) + ' BTC';
+                
+                // Display BTC with full precision and sats in parentheses
+                const confirmedSats = balanceData.confirmedSats || Math.round(balanceData.confirmed * 100000000);
+                const unconfirmedSats = balanceData.unconfirmedSats || Math.round(balanceData.unconfirmed * 100000000);
+                const totalSats = balanceData.totalSats || Math.round(balanceData.total * 100000000);
+                
+                document.getElementById('walletBalance').textContent = balanceData.confirmed.toFixed(8) + ' BTC (' + confirmedSats.toLocaleString() + ' sats)';
+                document.getElementById('walletUnconfirmed').textContent = balanceData.unconfirmed.toFixed(8) + ' BTC (' + unconfirmedSats.toLocaleString() + ' sats)';
                 
                 // Get real-time BTC price
                 const btcPrice = await getBTCPrice();
                 const usdValue = balanceData.total * btcPrice;
-                document.getElementById('walletUSD').textContent = '$' + usdValue.toFixed(2);
+                document.getElementById('walletUSD').textContent = '$' + usdValue.toFixed(2) + ' (' + totalSats.toLocaleString() + ' sats)';
                 document.getElementById('btcPrice').textContent = '$' + btcPrice.toLocaleString();
 
                 // Load transactions
@@ -1045,15 +1051,20 @@
                         </tr>
                     </thead>
                     <tbody>
-                        ${transactions.map(tx => `
+                        ${transactions.map(tx => {
+                            const sats = tx.amountSats || Math.round(tx.amount * 100000000);
+                            return `
                             <tr>
                                 <td><span class="status-badge ${tx.type === 'receive' ? 'status-online' : 'status-slow'}">${tx.type === 'receive' ? '📥 Receive' : '📤 Send'}</span></td>
-                                <td style="color: ${tx.type === 'receive' ? '#4cd964' : '#ff9500'}; font-weight: 600;">${tx.type === 'receive' ? '+' : '-'}${tx.amount.toFixed(8)} BTC</td>
+                                <td style="color: ${tx.type === 'receive' ? '#4cd964' : '#ff9500'}; font-weight: 600;">
+                                    ${tx.type === 'receive' ? '+' : '-'}${tx.amount.toFixed(8)} BTC
+                                    <br><span style="font-size: 0.85rem; opacity: 0.8;">(${sats.toLocaleString()} sats)</span>
+                                </td>
                                 <td>${tx.confirmations} confirmations</td>
                                 <td>${new Date(tx.timestamp).toLocaleString()}</td>
                                 <td style="font-family: monospace; font-size: 0.85rem;">${tx.txid.substring(0, 20)}...</td>
                             </tr>
-                        `).join('')}
+                        `}).join('')}
                     </tbody>
                 </table>
             `;
