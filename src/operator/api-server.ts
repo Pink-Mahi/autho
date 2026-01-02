@@ -503,6 +503,25 @@ export class OperatorAPIServer {
       }
     });
 
+    this.app.get('/api/offers/:offerId', async (req: Request, res: Response) => {
+      try {
+        const { offerId } = req.params;
+        const offersMap = (this.node as any).offers || new Map();
+        
+        const offer = offersMap.get(offerId);
+        
+        if (!offer) {
+          res.status(404).json({ error: 'Offer not found' });
+          return;
+        }
+
+        res.json(offer);
+      } catch (error: any) {
+        console.error('[API] Error fetching offer:', error);
+        res.status(500).json({ error: error.message });
+      }
+    });
+
     this.app.get('/api/offers/user/:address', async (req: Request, res: Response) => {
       try {
         const offersMap = (this.node as any).offers || new Map();
