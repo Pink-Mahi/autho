@@ -639,6 +639,59 @@ export class OperatorAPIServer {
     this.app.get('/api/join/peers', this.joinAPI.getPeers.bind(this.joinAPI));
     this.app.get('/api/join/network-stats', this.joinAPI.getNetworkStats.bind(this.joinAPI));
 
+    // User registration endpoint (non-custodial)
+    this.app.post('/api/users/register', async (req: Request, res: Response) => {
+      try {
+        const { username, email, password, bitcoinAddress, lightningAddress, publicKey } = req.body;
+        
+        if (!username || !email || !password || !bitcoinAddress) {
+          res.status(400).json({ error: 'Missing required fields' });
+          return;
+        }
+
+        // Validate Bitcoin address
+        if (!bitcoinAddress.match(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/)) {
+          res.status(400).json({ error: 'Invalid Bitcoin address' });
+          return;
+        }
+
+        // Store user (ONLY public data - never private keys!)
+        const userId = `USER_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        
+        const user = {
+          userId,
+          username,
+          email,
+          passwordHash: password, // In production: hash this with bcrypt!
+          bitcoinAddress, // Public address only
+          lightningAddress: lightningAddress || null, // Public address only
+          publicKey, // Public key only
+          createdAt: Date.now(),
+          walletType: 'non-custodial' // Important: we don't hold keys
+        };
+
+        // Store in memory (in production: use database)
+        if (!(this.node as any).users) {
+          (this.node as any).users = new Map();
+        }
+        (this.node as any).users.set(userId, user);
+
+        console.log(`[API] User registered: ${username} (${userId})`);
+        console.log(`  Bitcoin: ${bitcoinAddress}`);
+        console.log(`  Lightning: ${lightningAddress || 'Not enabled'}`);
+        console.log(`  ⚠️ Non-custodial: User controls their own keys`);
+
+        res.json({ 
+          success: true, 
+          userId,
+          message: 'Account created successfully. Keep your seed phrase safe!'
+        });
+      } catch (error: any) {
+        console.error('[API] Error registering user:', error);
+        res.status(500).json({ error: error.message });
+      }
+    });
+
     // Admin authentication endpoints
     this.app.post('/api/admin/login', async (req: Request, res: Response) => {
       try {
