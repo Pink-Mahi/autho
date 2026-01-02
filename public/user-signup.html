@@ -10,6 +10,9 @@
     <script src="https://bundle.run/bip32@2.0.6"></script>
     <script src="https://bundle.run/bitcoinjs-lib@6.0.1"></script>
     
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -229,6 +232,57 @@
         .copy-btn:hover {
             background: rgba(212, 175, 55, 0.3);
         }
+
+        .qr-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .qr-code-container {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .print-btn {
+            background: linear-gradient(135deg, #4cd964 0%, #2ecc71 100%);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 10px 5px;
+        }
+
+        .print-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 217, 100, 0.4);
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .qr-section, .qr-section * {
+                visibility: visible;
+            }
+            .qr-section {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white;
+            }
+            .print-btn, .copy-btn {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -311,6 +365,21 @@
                 <h3 style="color: #d4af37; margin-bottom: 15px;">Your Seed Phrase</h3>
                 <div class="seed-words" id="seedWords"></div>
                 <button class="copy-btn" onclick="copySeedPhrase()">📋 Copy to Clipboard</button>
+            </div>
+
+            <div class="qr-section">
+                <h3 style="color: #0a0a0a; margin-bottom: 10px;">📱 QR Code Backup</h3>
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
+                    Scan this QR code to restore your wallet on any device
+                </p>
+                <div class="qr-code-container" id="qrCodeContainer"></div>
+                <div>
+                    <button class="print-btn" onclick="printQRCode()">🖨️ Print QR Code</button>
+                    <button class="copy-btn" onclick="downloadQRCode()">💾 Download QR Code</button>
+                </div>
+                <p style="color: #ff9500; font-size: 0.85rem; margin-top: 15px;">
+                    ⚠️ Keep this QR code as safe as your seed phrase!
+                </p>
             </div>
 
             <div class="wallet-info">
@@ -442,10 +511,53 @@
                 // Display Bitcoin address
                 document.getElementById('bitcoinAddress').textContent = walletData.bitcoinAddress;
 
+                // Generate QR code for seed phrase
+                generateSeedQRCode();
+
                 goToStep(3);
             } catch (error) {
                 alert('Error generating wallet: ' + error.message);
                 console.error(error);
+            }
+        }
+
+        function generateSeedQRCode() {
+            const qrContainer = document.getElementById('qrCodeContainer');
+            qrContainer.innerHTML = ''; // Clear previous QR code
+            
+            // Create QR code from seed phrase
+            new QRCode(qrContainer, {
+                text: walletData.mnemonic,
+                width: 256,
+                height: 256,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H // High error correction
+            });
+        }
+
+        function printQRCode() {
+            window.print();
+        }
+
+        function downloadQRCode() {
+            const qrContainer = document.getElementById('qrCodeContainer');
+            const canvas = qrContainer.querySelector('canvas');
+            
+            if (canvas) {
+                // Convert canvas to blob
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `wallet-backup-${userData.username}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    alert('✅ QR code downloaded! Keep this file safe and secure.');
+                });
             }
         }
 
