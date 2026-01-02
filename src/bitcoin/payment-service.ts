@@ -12,6 +12,14 @@ export interface PaymentRequest {
   metadata?: any;
 }
 
+export interface FeeDistribution {
+  totalFeeSats: number;
+  mainNodeFeeSats: number;
+  operatorFeeSats: number;
+  mainNodeAddress: string;
+  operatorAddresses: string[];
+}
+
 export interface PaymentResponse {
   offerId: string;
   paymentMethod: 'bitcoin' | 'lightning' | 'both';
@@ -26,6 +34,10 @@ export interface PaymentResponse {
   // Common fields
   amountSats: number;
   expiresAt: number;
+  // Fee information
+  platformFeeSats?: number;
+  sellerReceivesSats?: number;
+  feeDistribution?: FeeDistribution;
 }
 
 export class PaymentService {
@@ -37,6 +49,11 @@ export class PaymentService {
   private lightningInvoices: Map<string, { offerId: string; invoice: LightningInvoice }> = new Map();
   private dataDir: string;
   private network: 'mainnet' | 'testnet';
+  
+  // Platform fee configuration
+  private static readonly PLATFORM_FEE_PERCENT = 0.75; // 0.75% total platform fee
+  private static readonly MAIN_NODE_SPLIT = 0.60; // 60% to main node
+  private static readonly OPERATOR_SPLIT = 0.40; // 40% to operator nodes
 
   constructor(dataDir: string, network: 'mainnet' | 'testnet' = 'mainnet', lightningConfig?: LightningConfig) {
     this.dataDir = dataDir;
@@ -79,6 +96,33 @@ export class PaymentService {
   }
 
   /**
+   * Calculate platform fee for a transaction
+   */
+  static calculatePlatformFee(amountSats: number): number {
+    return Math.floor(amountSats * (PaymentService.PLATFORM_FEE_PERCENT / 100));
+  }
+
+  /**
+   * Calculate fee distribution between main node and operators
+   */
+  static calculateFeeDistribution(
+    totalFeeSats: number,
+    mainNodeAddress: string,
+    operatorAddresses: string[]
+  ): FeeDistribution {
+    const mainNodeFeeSats = Math.floor(totalFeeSats * PaymentService.MAIN_NODE_SPLIT);
+    const operatorFeeSats = totalFeeSats - mainNodeFeeSats;
+
+    return {
+      totalFeeSats,
+      mainNodeFeeSats,
+      operatorFeeSats,
+      mainNodeAddress,
+      operatorAddresses
+    };
+  }
+
+  /**
    * Start monitoring payments
    */
   start(): void {
@@ -99,18 +143,35 @@ export class PaymentService {
    */
   async createPaymentRequest(
     request: PaymentRequest,
-    onPaymentConfirmed?: (payment: Payment) => void
+    onPaymentConfirmed?: (payment: Payment) => void,
+    mainNodeAddress?: string,
+    operatorAddresses?: string[]
   ): Promise<PaymentResponse> {
     const paymentMethod = request.paymentMethod || 'both';
     const expiresAt = Date.now() + request.expirySeconds * 1000;
     const amountBTC = request.amountSats / 100000000;
 
+    // Calculate platform fee (0.75%)
+    const platformFeeSats = PaymentService.calculatePlatformFee(request.amountSats);
+    const sellerReceivesSats = request.amountSats - platformFeeSats;
+
     const response: PaymentResponse = {
       offerId: request.offerId,
       paymentMethod,
       amountSats: request.amountSats,
-      expiresAt
+      expiresAt,
+      platformFeeSats,
+      sellerReceivesSats
     };
+
+    // Calculate fee distribution if addresses provided
+    if (mainNodeAddress && operatorAddresses && operatorAddresses.length > 0) {
+      response.feeDistribution = PaymentService.calculateFeeDistribution(
+        platformFeeSats,
+        mainNodeAddress,
+        operatorAddresses
+      );
+    }
 
     // Generate Bitcoin payment address
     if (paymentMethod === 'bitcoin' || paymentMethod === 'both') {
@@ -173,7 +234,14 @@ export class PaymentService {
 
     console.log(`[Payment Service] Created payment request for offer ${request.offerId}`);
     console.log(`  Method: ${response.paymentMethod}`);
-    console.log(`  Amount: ${request.amountSats} sats (${amountBTC} BTC)`);
+    console.log(`  Total Amount: ${request.amountSats} sats (${amountBTC} BTC)`);
+    console.log(`  Platform Fee (0.75%): ${platformFeeSats} sats`);
+    console.log(`  Seller Receives: ${sellerReceivesSats} sats`);
+    if (response.feeDistribution) {
+      console.log(`  Fee Distribution:`);
+      console.log(`    Main Node (60%): ${response.feeDistribution.mainNodeFeeSats} sats`);
+      console.log(`    Operators (40%): ${response.feeDistribution.operatorFeeSats} sats`);
+    }
     console.log(`  Expires: ${new Date(expiresAt).toISOString()}`);
 
     return response;

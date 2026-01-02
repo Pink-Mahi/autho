@@ -433,6 +433,11 @@ export class OperatorAPIServer {
         const offerId = `OFFER_${Date.now()}_${Math.random().toString(36).substring(7)}`;
         const expirySeconds = Math.floor((expiresIn || 86400000) / 1000); // Convert ms to seconds
 
+        // Get main node and operator addresses for fee distribution
+        const operatorInfo = this.node.getOperatorInfo();
+        const mainNodeAddress = process.env.MAIN_NODE_FEE_ADDRESS || operatorInfo.btcAddress;
+        const operatorAddresses = this.getActiveOperatorAddresses();
+
         // Create real payment request (supports both Bitcoin and Lightning)
         const paymentRequest = await this.paymentService.createPaymentRequest(
           {
@@ -452,13 +457,16 @@ export class OperatorAPIServer {
               offer.paymentTxid = payment.txid;
               offer.paymentConfirmations = payment.confirmations;
               
-              // TODO: Trigger settlement when payment confirmed
+              // Trigger settlement when payment confirmed
               if (payment.status === 'confirmed') {
                 console.log(`[Settlement] Ready to settle offer ${offerId}`);
+                this.processFeeDistribution(offer);
                 // This is where you'd trigger the ownership transfer
               }
             }
-          }
+          },
+          mainNodeAddress,
+          operatorAddresses
         );
 
         const offer = {
@@ -478,7 +486,11 @@ export class OperatorAPIServer {
           // Lightning payment info
           lightningInvoice: paymentRequest.lightningInvoice,
           lightningPaymentHash: paymentRequest.lightningPaymentHash,
-          lightningQR: paymentRequest.lightningQR
+          lightningQR: paymentRequest.lightningQR,
+          // Fee information
+          platformFeeSats: paymentRequest.platformFeeSats,
+          sellerReceivesSats: paymentRequest.sellerReceivesSats,
+          feeDistribution: paymentRequest.feeDistribution
         };
 
         // Store offer in memory
@@ -1018,6 +1030,72 @@ export class OperatorAPIServer {
         res.status(500).json({ error: error.message });
       }
     });
+  }
+
+  /**
+   * Get active operator addresses for fee distribution
+   */
+  private getActiveOperatorAddresses(): string[] {
+    // Get operator addresses from node's peer list
+    const operatorInfo = this.node.getOperatorInfo();
+    const operators = [operatorInfo.btcAddress];
+    
+    // Add peer operator addresses if available
+    const peers = (this.node as any).peers || [];
+    peers.forEach((peer: any) => {
+      if (peer.btcAddress) {
+        operators.push(peer.btcAddress);
+      }
+    });
+    
+    return operators.filter(addr => addr && addr.length > 0);
+  }
+
+  /**
+   * Process fee distribution for a paid offer
+   */
+  private processFeeDistribution(offer: any): void {
+    if (!offer.feeDistribution) {
+      console.log('[Fee Distribution] No fee distribution data available');
+      return;
+    }
+
+    const { totalFeeSats, mainNodeFeeSats, operatorFeeSats, mainNodeAddress, operatorAddresses } = offer.feeDistribution;
+
+    console.log('[Fee Distribution] Processing platform fees:');
+    console.log(`  Total Platform Fee: ${totalFeeSats} sats (0.75%)`);
+    console.log(`  Main Node (60%): ${mainNodeFeeSats} sats → ${mainNodeAddress}`);
+    console.log(`  Operators (40%): ${operatorFeeSats} sats`);
+
+    // Distribute operator fees among active operators
+    if (operatorAddresses.length > 0) {
+      const feePerOperator = Math.floor(operatorFeeSats / operatorAddresses.length);
+      console.log(`  Fee per operator: ${feePerOperator} sats (${operatorAddresses.length} operators)`);
+      
+      operatorAddresses.forEach((address: string, index: number) => {
+        console.log(`    Operator ${index + 1}: ${feePerOperator} sats → ${address}`);
+      });
+    }
+
+    // Store fee distribution record
+    const feeRecord = {
+      offerId: offer.offerId,
+      totalFeeSats,
+      mainNodeFeeSats,
+      operatorFeeSats,
+      mainNodeAddress,
+      operatorAddresses,
+      processedAt: Date.now(),
+      txid: offer.paymentTxid
+    };
+
+    // Save fee record (in production, this would be stored in database)
+    if (!(this.node as any).feeRecords) {
+      (this.node as any).feeRecords = [];
+    }
+    (this.node as any).feeRecords.push(feeRecord);
+
+    console.log('[Fee Distribution] Fee distribution recorded successfully');
   }
 
   async start(): Promise<void> {
