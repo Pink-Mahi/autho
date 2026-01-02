@@ -639,6 +639,60 @@ export class OperatorAPIServer {
     this.app.get('/api/join/peers', this.joinAPI.getPeers.bind(this.joinAPI));
     this.app.get('/api/join/network-stats', this.joinAPI.getNetworkStats.bind(this.joinAPI));
 
+    // Operator setup endpoint (non-custodial)
+    this.app.post('/api/operator/setup', async (req: Request, res: Response) => {
+      try {
+        const { operatorId, port, bitcoinAddress, publicKey, restored } = req.body;
+        
+        if (!operatorId || !bitcoinAddress || !publicKey) {
+          res.status(400).json({ error: 'Missing required fields' });
+          return;
+        }
+
+        // Validate Bitcoin address
+        if (!bitcoinAddress.match(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/)) {
+          res.status(400).json({ error: 'Invalid Bitcoin address' });
+          return;
+        }
+
+        // Save operator configuration (ONLY public data - never private keys!)
+        const dataDir = process.env.OPERATOR_DATA_DIR || './operator-data';
+        if (!fs.existsSync(dataDir)) {
+          fs.mkdirSync(dataDir, { recursive: true });
+        }
+
+        const operatorConfig = {
+          operatorId,
+          port: port || 3000,
+          bitcoinAddress, // Public address only
+          publicKey, // Public key only
+          createdAt: Date.now(),
+          restored: restored || false,
+          walletType: 'non-custodial' // Important: we don't hold keys
+        };
+
+        const configFile = path.join(dataDir, 'operator-config.json');
+        fs.writeFileSync(configFile, JSON.stringify(operatorConfig, null, 2));
+
+        console.log(`[API] Operator configured: ${operatorId}`);
+        console.log(`  Bitcoin Address (Fee Receiver): ${bitcoinAddress}`);
+        console.log(`  Port: ${port || 3000}`);
+        console.log(`  ⚠️ Non-custodial: Operator controls their own keys`);
+        console.log(`  📁 Config saved to: ${configFile}`);
+
+        res.json({ 
+          success: true, 
+          operatorId,
+          message: restored ? 
+            'Operator wallet restored successfully!' : 
+            'Operator wallet setup complete! Keep your seed phrase safe!'
+        });
+      } catch (error: any) {
+        console.error('[API] Error setting up operator:', error);
+        res.status(500).json({ error: error.message });
+      }
+    });
+
     // User registration endpoint (non-custodial)
     this.app.post('/api/users/register', async (req: Request, res: Response) => {
       try {
