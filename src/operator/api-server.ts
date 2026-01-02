@@ -433,8 +433,8 @@ export class OperatorAPIServer {
         const offerId = `OFFER_${Date.now()}_${Math.random().toString(36).substring(7)}`;
         const expirySeconds = Math.floor((expiresIn || 86400000) / 1000); // Convert ms to seconds
 
-        // Create real payment request
-        const paymentRequest = this.paymentService.createPaymentRequest(
+        // Create real payment request (supports both Bitcoin and Lightning)
+        const paymentRequest = await this.paymentService.createPaymentRequest(
           {
             offerId,
             amountSats: sats,
@@ -471,8 +471,14 @@ export class OperatorAPIServer {
           status: 'PENDING',
           createdAt: Date.now(),
           expiresAt: paymentRequest.expiresAt,
+          paymentMethod: paymentRequest.paymentMethod,
+          // Bitcoin payment info
           paymentAddress: paymentRequest.paymentAddress,
-          paymentQR: paymentRequest.qrData
+          bitcoinQR: paymentRequest.bitcoinQR,
+          // Lightning payment info
+          lightningInvoice: paymentRequest.lightningInvoice,
+          lightningPaymentHash: paymentRequest.lightningPaymentHash,
+          lightningQR: paymentRequest.lightningQR
         };
 
         // Store offer in memory

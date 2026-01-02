@@ -1,5 +1,6 @@
 import { HDWallet, PaymentAddress } from './hd-wallet';
 import { PaymentMonitor, Payment } from './payment-monitor';
+import { LightningService, LightningInvoice, LightningConfig } from './lightning-service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -7,27 +8,37 @@ export interface PaymentRequest {
   offerId: string;
   amountSats: number;
   expirySeconds: number;
+  paymentMethod?: 'bitcoin' | 'lightning' | 'both';
   metadata?: any;
 }
 
 export interface PaymentResponse {
   offerId: string;
-  paymentAddress: string;
+  paymentMethod: 'bitcoin' | 'lightning' | 'both';
+  // Bitcoin fields
+  paymentAddress?: string;
+  amountBTC?: number;
+  bitcoinQR?: string;
+  // Lightning fields
+  lightningInvoice?: string;
+  lightningPaymentHash?: string;
+  lightningQR?: string;
+  // Common fields
   amountSats: number;
-  amountBTC: number;
   expiresAt: number;
-  qrData: string;
 }
 
 export class PaymentService {
   private hdWallet: HDWallet;
   private monitor: PaymentMonitor;
+  private lightning: LightningService;
   private addressIndex: number = 0;
   private addressMap: Map<string, { offerId: string; index: number }> = new Map();
+  private lightningInvoices: Map<string, { offerId: string; invoice: LightningInvoice }> = new Map();
   private dataDir: string;
   private network: 'mainnet' | 'testnet';
 
-  constructor(dataDir: string, network: 'mainnet' | 'testnet' = 'mainnet') {
+  constructor(dataDir: string, network: 'mainnet' | 'testnet' = 'mainnet', lightningConfig?: LightningConfig) {
     this.dataDir = dataDir;
     this.network = network;
     
@@ -62,6 +73,9 @@ export class PaymentService {
 
     this.hdWallet = new HDWallet(mnemonic, network);
     this.monitor = new PaymentMonitor(network);
+    
+    // Initialize Lightning service
+    this.lightning = new LightningService(lightningConfig || { type: 'mock' });
   }
 
   /**
@@ -83,50 +97,128 @@ export class PaymentService {
   /**
    * Create a payment request for an offer
    */
-  createPaymentRequest(
+  async createPaymentRequest(
     request: PaymentRequest,
     onPaymentConfirmed?: (payment: Payment) => void
-  ): PaymentResponse {
-    // Generate unique address for this payment
-    const addressInfo = this.hdWallet.derivePaymentAddress(this.addressIndex);
-    
-    // Store mapping
-    this.addressMap.set(addressInfo.address, {
-      offerId: request.offerId,
-      index: this.addressIndex
-    });
-
-    // Increment index and save
-    this.addressIndex++;
-    this.saveAddressIndex();
-
-    // Register payment for monitoring
-    this.monitor.registerPayment(
-      addressInfo.address,
-      request.amountSats,
-      request.expirySeconds,
-      onPaymentConfirmed
-    );
-
-    const amountBTC = request.amountSats / 100000000;
+  ): Promise<PaymentResponse> {
+    const paymentMethod = request.paymentMethod || 'both';
     const expiresAt = Date.now() + request.expirySeconds * 1000;
+    const amountBTC = request.amountSats / 100000000;
 
-    // Create Bitcoin URI for QR code
-    const qrData = `bitcoin:${addressInfo.address}?amount=${amountBTC}`;
+    const response: PaymentResponse = {
+      offerId: request.offerId,
+      paymentMethod,
+      amountSats: request.amountSats,
+      expiresAt
+    };
+
+    // Generate Bitcoin payment address
+    if (paymentMethod === 'bitcoin' || paymentMethod === 'both') {
+      const addressInfo = this.hdWallet.derivePaymentAddress(this.addressIndex);
+      
+      this.addressMap.set(addressInfo.address, {
+        offerId: request.offerId,
+        index: this.addressIndex
+      });
+
+      this.addressIndex++;
+      this.saveAddressIndex();
+
+      this.monitor.registerPayment(
+        addressInfo.address,
+        request.amountSats,
+        request.expirySeconds,
+        onPaymentConfirmed
+      );
+
+      response.paymentAddress = addressInfo.address;
+      response.amountBTC = amountBTC;
+      response.bitcoinQR = `bitcoin:${addressInfo.address}?amount=${amountBTC}`;
+
+      console.log(`[Payment Service] Bitcoin address: ${addressInfo.address}`);
+    }
+
+    // Generate Lightning invoice
+    if (paymentMethod === 'lightning' || paymentMethod === 'both') {
+      try {
+        const invoice = await this.lightning.createInvoice(
+          request.amountSats,
+          `Payment for offer ${request.offerId}`,
+          request.expirySeconds
+        );
+
+        this.lightningInvoices.set(invoice.paymentHash, {
+          offerId: request.offerId,
+          invoice
+        });
+
+        response.lightningInvoice = invoice.paymentRequest;
+        response.lightningPaymentHash = invoice.paymentHash;
+        response.lightningQR = invoice.paymentRequest;
+
+        console.log(`[Payment Service] Lightning invoice: ${invoice.paymentHash}`);
+
+        // Start monitoring Lightning invoice
+        this.monitorLightningInvoice(invoice.paymentHash, onPaymentConfirmed);
+      } catch (error) {
+        console.error('[Payment Service] Error creating Lightning invoice:', error);
+        // If Lightning fails but both was requested, continue with Bitcoin only
+        if (paymentMethod === 'both') {
+          response.paymentMethod = 'bitcoin';
+        } else {
+          throw error;
+        }
+      }
+    }
 
     console.log(`[Payment Service] Created payment request for offer ${request.offerId}`);
-    console.log(`  Address: ${addressInfo.address}`);
+    console.log(`  Method: ${response.paymentMethod}`);
     console.log(`  Amount: ${request.amountSats} sats (${amountBTC} BTC)`);
     console.log(`  Expires: ${new Date(expiresAt).toISOString()}`);
 
-    return {
-      offerId: request.offerId,
-      paymentAddress: addressInfo.address,
-      amountSats: request.amountSats,
-      amountBTC,
-      expiresAt,
-      qrData
+    return response;
+  }
+
+  /**
+   * Monitor a Lightning invoice for payment
+   */
+  private async monitorLightningInvoice(
+    paymentHash: string,
+    onPaymentConfirmed?: (payment: Payment) => void
+  ): Promise<void> {
+    const checkInvoice = async () => {
+      const invoice = await this.lightning.checkInvoice(paymentHash);
+      
+      if (invoice && invoice.status === 'paid') {
+        console.log(`[Lightning] Invoice paid: ${paymentHash}`);
+        
+        if (onPaymentConfirmed) {
+          // Convert Lightning payment to Payment format
+          const payment: Payment = {
+            address: paymentHash,
+            expectedAmountSats: invoice.amountSats,
+            receivedAmountSats: invoice.amountSats,
+            confirmations: 1, // Lightning is instant
+            txid: paymentHash,
+            status: 'confirmed',
+            createdAt: Date.now(),
+            expiresAt: invoice.expiresAt
+          };
+          
+          onPaymentConfirmed(payment);
+        }
+        
+        return;
+      }
+
+      // Check again in 5 seconds if not paid
+      if (invoice && invoice.status === 'pending' && Date.now() < invoice.expiresAt) {
+        setTimeout(checkInvoice, 5000);
+      }
     };
+
+    // Start checking
+    checkInvoice();
   }
 
   /**
