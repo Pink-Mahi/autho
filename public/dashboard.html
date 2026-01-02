@@ -619,8 +619,8 @@
                                 <option value="high">High (20+ sats/byte) - ~10 min</option>
                                 <option value="custom">Custom</option>
                             </select>
-                            <input type="number" id="sendFee" step="0.00000001" value="0.00001000" placeholder="0.00001000" style="display: none; margin-top: 10px;">
-                            <div id="feeEstimate" style="font-size: 0.85rem; color: #999; margin-top: 5px;">Estimated: ~0.00001 BTC</div>
+                            <input type="number" id="sendFee" step="1" value="7" placeholder="7" style="display: none; margin-top: 10px;">
+                            <div id="feeEstimate" style="font-size: 0.85rem; color: #999; margin-top: 5px;">Estimated: ~1,750 sats (250 vB @ 7 sats/vB)</div>
                         </div>
                     </div>
                     <div style="background: rgba(255, 149, 0, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(255, 149, 0, 0.3);">
@@ -721,8 +721,8 @@
                             <input type="number" id="revSendAmount" step="0.00000001" min="0.00000001" required placeholder="0.00000000">
                         </div>
                         <div class="form-group">
-                            <label>Fee (BTC) (optional)</label>
-                            <input type="number" id="revSendFee" step="0.00000001" min="0" placeholder="0.00001000">
+                            <label>Fee Rate (sats/vB) (optional)</label>
+                            <input type="number" id="revSendFee" step="1" min="1" placeholder="7">
                         </div>
                     </div>
                     <div style="background: rgba(255, 149, 0, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(255, 149, 0, 0.3);">
@@ -1050,7 +1050,7 @@
             const toAddress = document.getElementById('revSendToAddress').value.trim();
             const amount = parseFloat(document.getElementById('revSendAmount').value);
             const feeVal = document.getElementById('revSendFee').value;
-            const fee = feeVal ? parseFloat(feeVal) : undefined;
+            const feeRateSatPerVByte = feeVal ? Math.floor(parseFloat(feeVal)) : undefined;
 
             const successEl = document.getElementById('revSendSuccess');
             const errorEl = document.getElementById('revSendError');
@@ -1063,7 +1063,7 @@
                 const res = await fetch('/api/node/wallet/send', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ toAddress, amount, fee })
+                    body: JSON.stringify({ toAddress, amount, feeRateSatPerVByte })
                 });
 
                 const data = await res.json();
@@ -1357,7 +1357,7 @@
             
             if (priority === 'custom') {
                 customFeeInput.style.display = 'block';
-                document.getElementById('feeEstimate').textContent = 'Enter custom fee amount';
+                document.getElementById('feeEstimate').textContent = 'Enter custom fee rate in sats/vB (e.g. 10)';
             } else {
                 customFeeInput.style.display = 'none';
                 
@@ -1376,11 +1376,10 @@
                 // Estimate transaction size (typical: 250 bytes)
                 const estimatedSize = 250;
                 const feeSats = estimatedSize * feeRate;
-                const feeBTC = feeSats / 100000000;
                 
-                customFeeInput.value = feeBTC.toFixed(8);
+                customFeeInput.value = String(feeRate);
                 document.getElementById('feeEstimate').textContent = 
-                    `Estimated: ${feeSats.toLocaleString()} sats (~$${(feeBTC * currentBTCPrice).toFixed(2)}) - ${confirmTime}`;
+                    `Estimated: ${feeSats.toLocaleString()} sats (${estimatedSize} vB @ ${feeRate} sats/vB) - ${confirmTime}`;
             }
         };
 
@@ -1400,7 +1399,7 @@
             
             const toAddress = document.getElementById('sendToAddress').value;
             let inputAmount = parseFloat(document.getElementById('sendAmount').value);
-            const fee = parseFloat(document.getElementById('sendFee').value);
+            const feeRateSatPerVByte = Math.floor(parseFloat(document.getElementById('sendFee').value));
 
             // Convert to BTC based on selected currency
             let btcAmount;
@@ -1426,7 +1425,7 @@
                 const response = await fetch('/api/node/wallet/send', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ toAddress, amount: btcAmount, fee })
+                    body: JSON.stringify({ toAddress, amount: btcAmount, feeRateSatPerVByte })
                 });
 
                 const data = await response.json();

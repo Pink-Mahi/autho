@@ -899,7 +899,7 @@ export class OperatorAPIServer {
 
     this.app.post('/api/node/wallet/send', async (req: Request, res: Response) => {
       try {
-        const { toAddress, amount, fee } = req.body;
+        const { toAddress, amount, fee, feeRateSatPerVByte } = req.body;
         
         if (!toAddress || !amount) {
           res.status(400).json({ error: 'Missing required fields: toAddress, amount' });
@@ -925,7 +925,35 @@ export class OperatorAPIServer {
         
         // Convert BTC to satoshis
         const amountSats = Math.floor(amount * 100000000);
-        const feeRate = fee ? Math.floor(fee * 100000000) : undefined;
+
+        // Fee rate is sats/vByte (NOT BTC). This matches BitcoinTransactionService.
+        // Prefer explicit feeRateSatPerVByte. If legacy "fee" is provided, treat it as sats/vB
+        // only if it is a reasonable integer-like value.
+        let feeRate: number | undefined;
+        if (typeof feeRateSatPerVByte === 'number' && !Number.isNaN(feeRateSatPerVByte)) {
+          feeRate = Math.floor(feeRateSatPerVByte);
+        } else if (typeof fee === 'number' && !Number.isNaN(fee)) {
+          // Backwards-compat: older UI sent "fee".
+          // If it looks like a sats/vB fee rate, accept it. If it looks like BTC (very small), reject.
+          if (fee > 0 && fee < 1) {
+            res.status(400).json({
+              success: false,
+              error: 'Invalid fee. Fee must be a fee rate in sats/vByte (e.g. 2, 7, 25), not a BTC amount.'
+            });
+            return;
+          }
+          feeRate = Math.floor(fee);
+        }
+
+        if (feeRate !== undefined) {
+          if (feeRate < 1 || feeRate > 500) {
+            res.status(400).json({
+              success: false,
+              error: 'Invalid fee rate. Must be between 1 and 500 sats/vByte.'
+            });
+            return;
+          }
+        }
 
         // Create Bitcoin transaction service
         const network = process.env.BITCOIN_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
