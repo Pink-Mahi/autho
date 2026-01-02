@@ -59,8 +59,19 @@ export class BitcoinTransactionService {
     amountSats: number,
     feeRate?: number
   ): Promise<string> {
-    // Parse private key
-    const keyPair = ECPair.fromWIF(privateKeyWIF, this.network);
+    // Parse private key (support both WIF and raw 32-byte hex)
+    let keyPair: any;
+    try {
+      keyPair = ECPair.fromWIF(privateKeyWIF, this.network);
+    } catch (e) {
+      const maybeHex = privateKeyWIF.trim();
+      const isHex = /^[0-9a-fA-F]{64}$/.test(maybeHex);
+      if (!isHex) {
+        throw e;
+      }
+      const privKeyBuf = Buffer.from(maybeHex, 'hex');
+      keyPair = ECPair.fromPrivateKey(privKeyBuf, { network: this.network });
+    }
     const fromAddress = bitcoin.payments.p2pkh({
       pubkey: keyPair.publicKey,
       network: this.network
